@@ -40,7 +40,7 @@ jobs:
           node scripts/check-ai-agents.cjs
           node scripts/check-kanban-expansion.cjs
           node scripts/check-dashboard-scroll.cjs
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: verification-${{ matrix.os }}
@@ -67,7 +67,7 @@ jobs:
       - run: npm run build
       - run: node scripts/verify-distribution.cjs
       - run: npm run release:check -- --candidate
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-macos-candidate
           retention-days: 7
@@ -104,7 +104,7 @@ jobs:
       - run: npm ci --ignore-scripts --cpu=${{ matrix.arch }}
       - run: ./platforms/windows/build.ps1 -Runtime ${{ matrix.runtime }}
       - run: node scripts/release-check.cjs --candidate dist/${{ matrix.runtime }}
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unsigned-${{ matrix.runtime }}-candidate
           retention-days: 7
