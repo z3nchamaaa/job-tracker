@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="__JT_THEME__" data-accent="__JT_ACCENT__">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="jt-csrf" content="__JT_CSRF_TOKEN__">
+  <title>就活トラッカー</title>
+  <link rel="icon" type="image/png" href="/app-icon.png">
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">メインコンテンツへスキップ</a>
+
+  <div id="app" class="app-shell">
+    <!-- Global Notification Toast -->
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Header -->
+    <header class="app-header" role="banner">
+      <div class="header-top">
+        <div class="brand-group">
+          <img src="/app-icon.png" alt="就活トラッカー アイコン" class="brand-icon" width="40" height="40">
+          <div class="brand-text">
+            <div class="brand-title-row">
+              <h1 class="brand-title">就活トラッカー</h1>
+              <button type="button" id="btn-version" class="brand-badge" title="バージョン情報と更新確認を開く" aria-label="バージョン情報と更新確認: Desktop v2.0">Desktop v2.0</button>
+            </div>
+            <p id="header-next-event" class="brand-subtitle">次の予定を読み込んでいます…</p>
+          </div>
+        </div>
+
+        <div class="header-actions" role="toolbar" aria-label="主要アクション">
+          <button type="button" id="btn-add-manual" class="btn btn-primary">
+            <span class="btn-icon" aria-hidden="true">＋</span>
+            <span>企業を手動追加</span>
+          </button>
+          <button type="button" id="btn-add-prompt" class="btn btn-tonal">
+            <span class="btn-icon" aria-hidden="true">✦</span>
+            <span>AI / プロンプトで追加</span>
+          </button>
+          <button type="button" id="btn-career-profile" class="btn btn-outlined">
+            <span>就活プロフィール</span>
+            <span id="profile-status-dot" class="status-pill" aria-label="プロフィール設定状態">未設定</span>
+          </button>
+          <button type="button" id="btn-data-manage" class="btn btn-outlined">
+            <span>データ管理・移行</span>
+          </button>
+          <button type="button" id="btn-app-settings" class="btn btn-outlined">設定</button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="view-nav" aria-label="表示切替">
+        <button type="button" class="view-tab is-active" data-view="kanban" aria-selected="true">
+          <span>カンバン</span>
+        </button>
+        <button type="button" class="view-tab" data-view="table" aria-selected="false">
+          <span>企業一覧</span>
+        </button>
+        <button type="button" class="view-tab" data-view="schedule" aria-selected="false">
+          <span>日程・締切</span>
+          <span id="nav-count-schedule" class="tab-badge">0</span>
+        </button>
+        <button type="button" class="view-tab" data-view="compensation" aria-selected="false">
+          <span>待遇比較</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- Corrupt State / Onboarding / Error Banners -->
+    <div id="system-banners" class="system-banners" role="region" aria-label="システム通知"></div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="app-main" tabindex="-1">
+      <!-- Metric Cards -->
+      <section id="metrics-section" class="metrics-grid" aria-label="選考サマリー指標"></section>
+
+      <!-- Active View Container -->
+      <section id="view-container" class="view-container" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <!-- Modal Backdrop & Container -->
+  <div id="modal-root" class="modal-root is-hidden" aria-hidden="true"></div>
+
+  <!-- Shared Isomorphic Modules -->
+  <script src="/shared/constants.cjs"></script>
+  <script src="/shared/company-priority.cjs"></script>
+  <script src="/shared/career-profile.cjs"></script>
+  <script src="/shared/company-prompt.cjs"></script>
+  <script src="/shared/company-draft.cjs"></script>
+  <script src="/shared/calendar.cjs"></script>
+  <script src="/shared/event-input.cjs"></script>
+  <script src="/shared/metrics.cjs"></script>
+
+  <!-- Main Application Script -->
+  <script src="/app.js"></script>
+</body>
+</html>

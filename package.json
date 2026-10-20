@@ -1,0 +1,20 @@
+{
+  "name": "job-tracker",
+  "version": "2.0.0",
+  "description": "就活トラッカー 軽量新版 - ローカルで動作するコンパクトな就職活動管理デスクトップアプリ",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "scripts": {
+    "start": "node scripts/start.cjs",
+    "dev": "node scripts/start.cjs --dev",
+    "test": "node --test test/*.test.cjs",
+    "build": "node scripts/build.cjs",
+    "screenshots": "node scripts/capture-screenshots.cjs",
+    "security:audit": "node scripts/security-audit.cjs"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

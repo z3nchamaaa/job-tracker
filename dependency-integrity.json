@@ -1,0 +1,58 @@
+{
+  "checkedAt": "2026-10-19",
+  "packages": [
+    {
+      "name": "Microsoft.Web.WebView2",
+      "version": "1.0.4258.31",
+      "source": "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.4258.31/microsoft.web.webview2.1.0.4258.31.nupkg",
+      "downloadBytes": 9801922,
+      "sha256": "56f7f4b8bf9aee4b8efefbbdd4f67d5f74ebd1b100ed0806da71bf76af481aa9",
+      "sha512": "1e5195c2fc8ffc85a25c053c2b9ed59a0e7d9216370d630ec4c9c7e001eeb05472d3fbc3023288b5750854d5e25d76aae022df499c8d522735c0e2259cf2ec3d",
+      "license": [
+        {
+          "type": "file",
+          "value": "LICENSE.txt"
+        }
+      ],
+      "dependencies": [],
+      "buildHooks": [
+        "build/Common.targets",
+        "build/Microsoft.Web.WebView2.targets",
+        "build/native/Microsoft.Web.WebView2.targets",
+        "build/wv2winrt.targets",
+        "buildTransitive/Microsoft.Web.WebView2.targets"
+      ],
+      "nugetSignaturePresent": true,
+      "signatureVerified": false,
+      "installedOrExecuted": false
+    },
+    {
+      "name": "System.Security.Cryptography.ProtectedData",
+      "version": "10.0.13",
+      "source": "https://api.nuget.org/v3-flatcontainer/system.security.cryptography.protecteddata/10.0.13/system.security.cryptography.protecteddata.10.0.13.nupkg",
+      "downloadBytes": 154163,
+      "sha256": "b0b44ace8b5decc129b96dcc6281c7ea238975dd18493f525f0dd2a04da98d6d",
+      "sha512": "16f139258e630487fcbffe24c02a77c096346cea1efe667c9c7d068f5234b93eee2be593b4c48eb28251f13336372276eee4cdf68d27a5d6f9484dd36ef67686",
+      "license": [
+        {
+          "type": "expression",
+          "value": "MIT"
+        }
+      ],
+      "dependencies": [
+        {
+          "id": "System.Memory",
+          "version": "4.6.3",
+          "exclude": "Build,Analyzers"
+        }
+      ],
+      "buildHooks": [
+        "buildTransitive/netcoreapp2.0/System.Security.Cryptography.ProtectedData.targets",
+        "buildTransitive/net461/System.Security.Cryptography.ProtectedData.targets"
+      ],
+      "nugetSignaturePresent": true,
+      "signatureVerified": false,
+      "installedOrExecuted": false
+    }
+  ]
+}

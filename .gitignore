@@ -1,0 +1,46 @@
+# Local specifications and work records
+/docs/
+
+# Dependencies, generated packages, test output and OS files
+node_modules/
+/dist/
+coverage/
+bin/
+obj/
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store
+Thumbs.db
+
+# Local environment, credentials and personal agent settings
+.env
+.env.*
+.agents/
+.codex/
+.aws/
+.claude/
+.gemini/
+AGENTS.md
+auth/
+*.enc
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Runtime databases, profiles, backups and exports
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+career-profile.json
+app-settings.json
+backups/
+/data/
+/user-data/
+/exports/
