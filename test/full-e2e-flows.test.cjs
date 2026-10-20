@@ -166,7 +166,7 @@ test('ChatGPTService full OAuth PKCE callback, state mismatch rejection, model c
   }
 });
 
-test('AppUpdater verifies SHA-256 and size on download and rejects mismatched digest', async () => {
+test('AppUpdater verifies SHA-256 and size, rejects mismatched digest and ignores claimed signing flags', async () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-updater-dl-'));
   const fakeDmg = Buffer.from('fake-dmg-binary-payload-for-sha256-test', 'utf8');
   const validSha256 = crypto.createHash('sha256').update(fakeDmg).digest('hex');
@@ -186,7 +186,7 @@ test('AppUpdater verifies SHA-256 and size on download and rejects mismatched di
             tag_name: 'v2.1.0',
             draft: false,
             prerelease: false,
-            code_signed: false,
+            code_signed: true,
             body: 'Release notes 2.1.0',
             assets: [
               {

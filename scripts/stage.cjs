@@ -3,10 +3,11 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
+const { dependencyFiles } = require('./dependencies.cjs');
 
 // Only executable application sources, known icons and license notices are staged.
 // Dotfiles, links, data/config files and unrelated directories are never copied.
-function runtimeFiles(platform) {
+function runtimeFiles(platform, arch = process.arch) {
   const files = [];
   const visit = (relative, extensions) => {
     for (const entry of fs.readdirSync(path.join(root, relative), { withFileTypes: true })) {
@@ -19,7 +20,8 @@ function runtimeFiles(platform) {
   visit('src/backend', ['.cjs']);
   visit('src/shared', ['.cjs']);
   visit('src/ui', ['.js', '.css', '.html']);
-  files.push('package.json', 'LICENSE', 'licenses/Lucide.txt', ...['png', 'ico'].map((ext) => `assets/icons/app-icon.${ext}`));
+  files.push('package.json', 'package-lock.json', 'LICENSE', 'licenses/Lucide.txt', 'licenses/Copilot-SDK-MIT.txt', ...['png', 'ico'].map((ext) => `assets/icons/app-icon.${ext}`));
+  files.push(...dependencyFiles(platform, arch));
   const hosts = { macos: ['bridge.js'], windows: ['bridge.js'], linux: ['job-tracker-host.py'] };
   if (!hosts[platform]) throw new Error('Unsupported staging platform');
   files.push(...hosts[platform].map((file) => `platforms/${platform}/${file}`));
@@ -32,8 +34,8 @@ function runtimeFiles(platform) {
   return files.sort();
 }
 
-function copyRuntime(destination, platform) {
-  for (const relative of runtimeFiles(platform)) {
+function copyRuntime(destination, platform, arch = process.arch) {
+  for (const relative of runtimeFiles(platform, arch)) {
     const source = path.join(root, relative);
     const stat = fs.lstatSync(source);
     if (!stat.isFile() || stat.isSymbolicLink()) throw new Error(`Unsupported distribution file: ${relative}`);
@@ -44,11 +46,11 @@ function copyRuntime(destination, platform) {
 }
 
 if (require.main === module) {
-  const [destination, platform] = process.argv.slice(2);
+  const [destination, platform, arch] = process.argv.slice(2);
   if (!destination) throw new Error('Staging destination is required');
   const resolved = path.resolve(destination);
   if (!resolved.startsWith(path.join(root, 'dist') + path.sep)) throw new Error('Stage inside dist only');
-  copyRuntime(resolved, platform);
+  copyRuntime(resolved, platform, arch);
 }
 
 module.exports = { runtimeFiles, copyRuntime };

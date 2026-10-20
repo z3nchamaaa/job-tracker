@@ -17,6 +17,9 @@ ROOT = Path(__file__).resolve().parents[2]
 VERSION = json.loads((ROOT / "package.json").read_text())["version"]
 OUT = ROOT / "dist" / "linux-x64"
 
+def artifact_name(kind):
+    return subprocess.check_output(["node", str(ROOT / "src/backend/artifact-names.cjs"), VERSION, "linux", "x64", kind], text=True).strip()
+
 
 def tar_gzip(folder):
     output = io.BytesIO()
@@ -46,7 +49,7 @@ def main():
     if stage.exists():
         shutil.rmtree(stage)
     app = stage / "opt" / "job-tracker"
-    subprocess.run(["node", str(ROOT / "scripts/stage.cjs"), str(app), "linux"], check=True)
+    subprocess.run(["node", str(ROOT / "scripts/stage.cjs"), str(app), "linux", "x64"], check=True)
     host = app / "platforms/linux/job-tracker-host.py"
     host.chmod(0o755)
     launcher = stage / "usr/bin/job-tracker"
@@ -67,7 +70,7 @@ def main():
             "Depends: nodejs (>= 24.15.0), python3, python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, libsecret-tools\n"
             "Description: Local job application tracker with system WebView\n"
         )
-        target = OUT / f"job-tracker-{VERSION}-linux-amd64.deb"
+        target = OUT / artifact_name('deb')
         with target.open("wb") as archive:
             archive.write(b"!<arch>\n")
             for name, content in [("debian-binary", b"2.0\n"), ("control.tar.gz", tar_gzip(control_dir)), ("data.tar.gz", tar_gzip(stage))]:
@@ -82,6 +85,8 @@ def main():
         if not shutil.which("rpmbuild"):
             raise SystemExit("rpmbuild is required for RPM packaging; no RPM was generated")
         top = OUT / "rpm-build"
+        if (top / "RPMS").exists():
+            shutil.rmtree(top / "RPMS")
         for name in ["BUILD", "RPMS", "SOURCES", "SPECS", "SRPMS", "BUILDROOT", "tmp"]:
             (top / name).mkdir(parents=True, exist_ok=True)
         payload = top / "SOURCES/payload"
@@ -94,7 +99,6 @@ Version: {VERSION}
 Release: 1
 Summary: Local job application tracker
 License: MIT
-BuildArch: noarch
 AutoReqProv: no
 Requires: nodejs >= 24.15.0, python3, python3-gobject, gtk3, webkit2gtk4.1, libsecret
 %description
@@ -109,25 +113,30 @@ cp -R "%{{_sourcedir}}/payload/." "%{{buildroot}}/"
 /usr/bin/job-tracker
 /usr/share/applications/jp.jobtracker.app.desktop
 """)
-        subprocess.run(["rpmbuild", "-bb", "--target", "noarch-linux", "--define", f"_topdir {top}",
+        subprocess.run(["rpmbuild", "-bb", "--target", "x86_64-linux", "--define", f"_topdir {top}",
                         "--define", f"_tmppath {top / 'tmp'}", "--define", "_buildhost local",
                         "--define", "_build_id_links none", str(spec)], check=True, timeout=120)
         candidates = list((top / "RPMS").rglob("*.rpm"))
         if len(candidates) != 1:
             raise SystemExit("Expected exactly one RPM")
-        target = OUT / f"job-tracker-{VERSION}-linux-noarch.rpm"
+        arch = subprocess.check_output(["rpm", "-qp", "--qf", "%{ARCH}", str(candidates[0])], text=True).strip()
+        if arch != "x86_64":
+            raise SystemExit(f"Unexpected RPM architecture: {arch}")
+        target = OUT / artifact_name('rpm')
         shutil.copyfile(candidates[0], target)
         print(target.relative_to(ROOT))
     packages = []
     for file in sorted(OUT.iterdir()):
-        if file.is_file() and file.suffix in (".deb", ".rpm"):
+        if file.is_file() and file.name in (artifact_name('deb'), artifact_name('rpm')):
             packages.append({"path": str(file.relative_to(ROOT)), "bytes": file.stat().st_size,
                              "sha256": hashlib.sha256(file.read_bytes()).hexdigest()})
+    subprocess.run(["node", "-e", "require('./scripts/sbom.cjs').platformSbom(process.argv[1],process.argv[2],'linux','x64')", str(app), str(OUT)], cwd=ROOT, check=True)
+    subprocess.run(["node", str(ROOT / "scripts/release-manifest.cjs"), str(OUT)], cwd=ROOT, check=True)
     (OUT / "package-report.json").write_text(json.dumps({
         "version": VERSION, "packages": packages,
         "unpackedPayloadBytes": sum(file.stat().st_size for file in stage.rglob("*") if file.is_file()),
         "runtimeVerified": False, "sharedRuntimeDownloadBytes": "unmeasured",
-        "note": "Package candidates generated on macOS. Linux installation, dependency resolution and runtime are unverified. RPM payload is architecture-independent; the target environment under review is Linux x64."
+        "note": "Package candidates target Linux x64. Building on another OS does not verify Linux execution. Copilot requires the target OS native package; its availability is checked separately."
     }, ensure_ascii=False, indent=2) + "\n")
 
 

@@ -18,6 +18,10 @@ const resourcesDir = path.join(contentsDir, 'Resources');
 const bundledAppDir = path.join(resourcesDir, 'app');
 
 const { copyRuntime } = require('./stage.cjs');
+const { artifactName } = require('../src/backend/artifact-names.cjs');
+const version = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'))).version;
+const { platformSbom } = require('./sbom.cjs');
+const { writeManifest } = require('./release-manifest.cjs');
 
 function getDirectorySizeBytes(dirPath) {
   let total = 0;
@@ -129,13 +133,13 @@ function buildMacArm64() {
   });
 
   // 5. Create ZIP archive
-  const zipPath = path.join(macDist, 'JobTracker-2.0.0-mac-arm64.zip');
+  const zipPath = path.join(macDist, artifactName(version, 'darwin', 'arm64', 'zip'));
   execFileSync('/usr/bin/ditto', ['-c', '-k', '--sequesterRsrc', '--keepParent', appBundle, zipPath], {
     stdio: 'inherit',
   });
 
   // 6. Create DMG image
-  const dmgPath = path.join(macDist, 'JobTracker-2.0.0-mac-arm64.dmg');
+  const dmgPath = path.join(macDist, artifactName(version, 'darwin', 'arm64', 'dmg'));
   execFileSync(
     '/usr/bin/hdiutil',
     [
@@ -151,6 +155,9 @@ function buildMacArm64() {
     ],
     { stdio: 'inherit' }
   );
+
+  platformSbom(bundledAppDir, macDist, 'darwin', 'arm64');
+  writeManifest(macDist);
 
   // 7. Verify distribution cleanliness (no DB, keys, .env, personal/agent configs)
   const forbiddenExts = new Set(['.db', '.sqlite', '.sqlite3', '.enc', '.pem', '.key', '.p12']);
@@ -273,7 +280,7 @@ function buildMacArm64() {
       macosMeets50MBTarget: unpackedBytes <= 50 * 1024 * 1024,
       macosMeets15MBTarget: unpackedBytes <= 15 * 1024 * 1024,
       windows50PercentReductionVerified: false,
-      note: 'macOS .app bundle unpacked size is measured and meets the <=50 MB (and <=15 MB) targets on macOS. Because Windows build/unpacked size is not measured on this macOS environment, the Windows 50% reduction target against the 479,627,417-byte legacy Windows build is NOT claimed as achieved.',
+      note: 'macOS .app size is measured; the boolean fields report whether the targets are met. Copilot runtime increases the application size. Windows reduction remains unverified until a measured Windows build is available.',
     },
     dynamicLinkDependencies: {
       macosHostBinary: dynamicLibs,

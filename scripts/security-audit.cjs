@@ -3,6 +3,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { verifyDependencyPolicy } = require('./dependencies.cjs');
 
 const repoRoot = path.resolve(__dirname, '..');
 
@@ -28,9 +29,7 @@ function runAudit() {
   const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
   const depsCount = Object.keys(pkg.dependencies || {}).length;
   const devDepsCount = Object.keys(pkg.devDependencies || {}).length;
-  if (depsCount !== 0 || devDepsCount !== 0) {
-    findings.push(`External npm dependencies detected: dependencies=${depsCount}, devDependencies=${devDepsCount}`);
-  }
+  try { verifyDependencyPolicy(); } catch (error) { findings.push(error.message); }
 
   // 2. Check .npmrc
   const npmrc = fs.readFileSync(path.join(repoRoot, '.npmrc'), 'utf8');
@@ -137,10 +136,11 @@ function runAudit() {
       {
         ok: true,
         auditType: 'static-source-and-distribution-policy-check',
-        note: 'This script performs static source/bundle checks (zero npm packages, ignore-scripts=true, forbidden identifiers, eval/TLS bypass, dist cleanliness). OS WebView, Node.js runtime, SQLite, and .NET CVE tracking are documented separately in README.md.',
+        note: 'Static policy check: pinned official Copilot SDK and reviewed transitive MIT dependencies, registry origin/SRI lock, ignore-scripts=true, forbidden identifiers, eval/TLS bypass, distribution cleanliness. Not a full CVE or penetration audit.',
         scannedSourceFilesCount: files.length,
         scannedDistFilesCount: distFilesCount,
-        externalNpmDependenciesCount: 0,
+        externalNpmDependenciesCount: depsCount,
+        externalNpmDevDependenciesCount: devDepsCount,
         npmIgnoreScripts: true,
         nodeRuntimeVersion: process.version,
         findings: [],

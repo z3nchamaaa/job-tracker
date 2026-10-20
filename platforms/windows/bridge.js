@@ -3,6 +3,7 @@
 
   const ALLOWED_METHODS = Object.freeze([
     'getAiAgents', 'saveAiAgent', 'removeAiAgent', 'generateWithAiAgent', 'cancelAiAgentGeneration',
+    'getCopilotStatus', 'configureCopilot', 'beginCopilotLogin', 'cancelCopilotLogin', 'signOutCopilot', 'getCopilotDetails', 'generateWithCopilot', 'cancelCopilotGeneration',
     'getAppSettings',
     'saveAppSettings',
     'getUpdateStatus',

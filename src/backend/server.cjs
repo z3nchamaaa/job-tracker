@@ -22,6 +22,7 @@ const {
 const { EventInputError } = require("../shared/event-input.cjs");
 const { AppSettingsStore, createNativeAppAuth, createAppSettingsService } = require('./app-settings.cjs');
 const { AiAgents } = require('./ai-agents.cjs');
+const { CopilotService } = require('./copilot.cjs');
 
 const MAX_JSON_BODY_BYTES = 60 * 1024 * 1024; // 60 MiB (allows up to 50MiB base64 SQLite import)
 const DEFAULT_BODY_LIMIT = 512 * 1024; // 512 KiB for normal API requests
@@ -201,8 +202,10 @@ function createAppServer(options = {}) {
     });
 
   const aiAgents = new AiAgents({ dataDir: authDir, safeStorage, fetch: options.agentFetch || options.fetch || globalThis.fetch });
+  const copilotService = options.copilotService || new CopilotService({ dataDir: authDir, safeStorage, fetch: options.copilotFetch || globalThis.fetch });
   const ipcDispatcher = createIpcDispatcher({
     aiAgents,
+    copilotService,
     appSettingsService,
     chatgptService,
     profileStore,
@@ -724,6 +727,7 @@ function createAppServer(options = {}) {
 
   async function stop() {
     aiAgents.cancel();
+    await copilotService.shutdown();
     try {
       if (updater && typeof updater.shutdown === "function") {
         updater.shutdown();

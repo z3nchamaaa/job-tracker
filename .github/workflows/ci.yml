@@ -1,0 +1,115 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    name: Core checks (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 26.11.1
+      - run: npm ci --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=low
+      - run: node --test --test-timeout=30000 test/*.test.cjs
+      - run: npm run security:audit
+      - run: npm run sbom
+      - name: Copilot UI and layout (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          node scripts/check-copilot.cjs
+          node scripts/check-ai-agents.cjs
+          node scripts/check-kanban-expansion.cjs
+          node scripts/check-dashboard-scroll.cjs
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: verification-${{ matrix.os }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: |
+            dist/sbom/*.json
+            dist/verification/*.json
+            dist/screenshots/copilot-*.png
+  mac-candidate:
+    name: macOS candidate
+    needs: core
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 26.11.1
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: node scripts/verify-distribution.cjs
+      - run: npm run release:check -- --candidate
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: unsigned-macos-candidate
+          retention-days: 7
+          path: |
+            dist/mac-arm64/*.dmg
+            dist/mac-arm64/*.zip
+            dist/mac-arm64/*.cdx.json
+            dist/mac-arm64/SHA256SUMS
+            dist/mac-arm64/release-manifest.json
+  windows-compile:
+    name: Windows compile (${{ matrix.runtime }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runtime: win-x64
+            arch: x64
+          - runtime: win-arm64
+            arch: arm64
+    needs: core
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 26.11.1
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: 10.0.402
+      - run: npm ci --ignore-scripts --cpu=${{ matrix.arch }}
+      - run: ./platforms/windows/build.ps1 -Runtime ${{ matrix.runtime }}
+      - run: node scripts/release-check.cjs --candidate dist/${{ matrix.runtime }}
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: unsigned-${{ matrix.runtime }}-candidate
+          retention-days: 7
+          path: |
+            dist/${{ matrix.runtime }}/*-portable.zip
+            dist/${{ matrix.runtime }}/*.cdx.json
+            dist/${{ matrix.runtime }}/SHA256SUMS
+            dist/${{ matrix.runtime }}/release-manifest.json

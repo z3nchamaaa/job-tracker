@@ -106,6 +106,15 @@ html.native-macos .modal-dialog {
 
 .settings-form { display: contents; }
 .api-agent-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.copilot-setup-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; margin: 12px 0; }
+.copilot-setup-form .form-field { flex: 1 1 240px; min-width: 0; }
+.copilot-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.copilot-controls > p, .copilot-quota { flex-basis: 100%; min-width: 0; }
+.copilot-device-code { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+.copilot-device-code > span { flex-basis: 100%; }
+.copilot-device-code strong { font-family: var(--font-mono); font-size: 1.4rem; letter-spacing: .08em; }
+.copilot-panel .chip { max-width: 100%; overflow-wrap: anywhere; }
+.api-agent-controls select { max-width: 100%; min-width: 0; }
 .api-agent-controls > .select, .api-agent-controls > p { width: 100%; min-width: 0; }
 .registered-agents { display: flex; flex-direction: column; gap: 8px; }
 .agent-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid var(--m3-outline-variant); border-radius: var(--radius-sm); padding: 10px; }

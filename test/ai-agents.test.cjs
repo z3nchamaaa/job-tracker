@@ -26,7 +26,7 @@ test('Agent credentials are encrypted, absent from metadata, deletable and fail 
   const saved = add(agents);
   assert(!JSON.stringify(saved).includes('secret'));
   assert(!fs.readFileSync(agents.file).includes('synthetic-secret'));
-  assert.equal(fs.statSync(agents.file).mode & 0o777, 0o600);
+  if (process.platform !== 'win32') assert.equal(fs.statSync(agents.file).mode & 0o777, 0o600);
   assert.equal(agents.list()[0].name, '架空の接続先');
   const before = fs.readFileSync(agents.file);
   storage.encryptString = () => { throw new Error('synthetic encryption failure'); };

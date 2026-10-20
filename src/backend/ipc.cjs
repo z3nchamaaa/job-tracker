@@ -65,7 +65,7 @@ function validateExternalHttpsUrl(rawUrl) {
   return validated;
 }
 
-function createIpcDispatcher({ chatgptService, profileStore, updater, openExternal, appSettingsService, aiAgents }) {
+function createIpcDispatcher({ chatgptService, profileStore, updater, openExternal, appSettingsService, aiAgents, copilotService }) {
   const assertNoArg = (arg, methodName) => {
     if (arg !== undefined && arg !== null) {
       throw new Error(`${methodName} に不要な引数は指定できません。`);
@@ -73,6 +73,14 @@ function createIpcDispatcher({ chatgptService, profileStore, updater, openExtern
   };
 
   const handlers = Object.freeze({
+    getCopilotStatus: async (arg) => { assertNoArg(arg, 'getCopilotStatus'); return copilotService.getStatus(); },
+    configureCopilot: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Copilot設定が不正です。'); return copilotService.configure(arg); },
+    beginCopilotLogin: async (arg) => { assertNoArg(arg, 'beginCopilotLogin'); return copilotService.beginLogin(); },
+    cancelCopilotLogin: async (arg) => { assertNoArg(arg, 'cancelCopilotLogin'); return copilotService.cancelLogin(); },
+    signOutCopilot: async (arg) => { assertNoArg(arg, 'signOutCopilot'); return copilotService.signOut(); },
+    getCopilotDetails: async (arg) => { assertNoArg(arg, 'getCopilotDetails'); return copilotService.details(); },
+    generateWithCopilot: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Copilot生成入力が不正です。'); return copilotService.generate(arg); },
+    cancelCopilotGeneration: async (arg) => { assertNoArg(arg, 'cancelCopilotGeneration'); return copilotService.cancelGenerate(); },
     getAiAgents: async (arg) => { assertNoArg(arg, 'getAiAgents'); return { providers: aiAgents.catalog(), agents: aiAgents.list() }; },
     saveAiAgent: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('登録内容が不正です。'); return aiAgents.save(arg); },
     removeAiAgent: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('登録IDが不正です。'); return aiAgents.remove(arg); },

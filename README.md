@@ -25,7 +25,7 @@ npm run dev -- --server-only
 
 ## ビルド・検証
 
-npm依存は0件で、npm installは不要です。外部ブラウザーやSDKを既存プロジェクトからコピーしません。
+Copilot連携に公式 `@github/copilot-sdk` 1.0.23と推移依存を使用します。初回は `npm ci --ignore-scripts` で固定版を導入してください。対象OS・CPU用の公式ランタイムも取得するため、配布物の容量は増えます。既存プロジェクトの依存やログイン情報はコピーしません。
 
 ```sh
 npm test
@@ -62,7 +62,21 @@ ChatGPT連携は公式の[オープンソース向けトークン共有](https:/
 
 「AI / プロンプトで追加」→「各種エージェントを登録する」で、提供元・表示名・モデルID・APIキーを登録できます。対象はOpenAI、OpenRouter、Claude、Gemini、Grok、Perplexity Agent API、DeepSeek、Mistral、Z.AI、Kimi、MiniMax（通常API／M Plan）の11社・12方式です。モデルIDは各提供元の管理画面で確認してください。APIキーは `auth/api-agents.enc` にOS保護付きで暗号化し、企業バックアップには含めません。削除はアプリ内の登録解除であり、提供元側のキー失効は管理画面から行います。
 
-登録だけでは通信せず、元の画面で接続先を選び「このプロンプトを送信して生成」を押すと、表示中の共通プロンプト（就活プロフィールを含む）がその提供元へ送信されます。生成結果はプレビューを確認してから保存します。PerplexityのみWeb検索を指定し、他の接続は既知情報の整理用です。通常APIはチャットの月額契約とは別枠で、MiniMax M Planだけ専用Subscription Keyに対応します。Z.AI Coding Plan・Kimi Codeの利用枠、Copilot SDK、Nousのローカル中継、Qwenの地域別接続、新規OAuthは今回未対応。API応答処理は模擬通信で検証済みで、実キーによる疎通・課金・全モデルの動作は未検証です。
+登録だけでは通信せず、元の画面で接続先を選び「このプロンプトを送信して生成」を押すと、表示中の共通プロンプト（就活プロフィールを含む）がその提供元へ送信されます。生成結果はプレビューを確認してから保存します。PerplexityのみWeb検索を指定し、他の接続は既知情報の整理用です。通常APIはチャットの月額契約とは別枠で、MiniMax M Planだけ専用Subscription Keyに対応します。Z.AI Coding Plan・Kimi Codeの利用枠、Nousのローカル中継、Qwenの地域別接続は今回未対応。API応答処理は模擬通信で検証済みで、実キーによる疎通・課金・全モデルの動作は未検証です。
+
+### GitHub Copilotの設定
+
+「各種エージェントを登録する」の「GitHub Copilot連携」から設定します。
+
+1. GitHubの Settings → Developer settings → OAuth Apps で、このアプリ専用のOAuth Appを作成し、**Enable Device Flow**を有効にします。Client Secretはアプリへ入力・同梱しません。
+2. 公開識別子のClient IDをアプリへ入力し、「Client IDを保存」を押します。
+3. 「GitHubでCopilotにログイン」を押し、表示された確認コードを「GitHubで承認する」から入力します。GitHub上のアプリ名・要求権限を確認して承認してください。
+4. 「モデル・利用枠を確認」で利用可能なモデルと取得できた残量を確認します。未取得の残量を0や無制限として表示しません。自動選択（auto）も利用できます。
+5. 「戻る」から接続先にGitHub Copilotを選び、明示的に生成します。企業DBへはプレビュー確認後に保存します。
+
+認証はGitHubの公式[Device Flow](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/authorizing-oauth-apps#device-flow)、生成は公式[Copilot SDKのOAuth連携](https://github.com/github/copilot-sdk/blob/main/docs/setup/github-oauth.md)です。トークンは `auth/copilot.enc` にOS保護付きで暗号化します。既存の`gh`／Copilot CLI認証や環境変数のキーは使わず、一時的な空の作業領域で、ファイル・シェル・MCP・スキル・Web検索・リモートセッションを無効にします。処理終了時にランタイムを停止し、一時領域を削除します。期限切れトークンは再ログインが必要です。連携解除はローカルのトークン削除で、GitHub側の認可取消はGitHubのOAuth App設定で行います。
+
+利用資格・モデル・残量・追加課金はGitHubの契約と組織ポリシーに依存します。[利用枠の公式説明](https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/usage-and-billing)を参照してください。無料・無制限とは保証しません。実OAuth Appは未作成のため、実アカウントの承認・契約枠での生成は未検証です。SDKとの実通信は認証なしのランタイム起動まで確認しています。モデル呼び出しは模擬APIで検証します。
 
 更新画面は起動時／手動確認、通知、明示ダウンロード、ハッシュ検証、確認後の起動に対応します。正式な配布リポジトリが未確定なので既定では無効です。公開・リリースは行っていません。
 
@@ -100,3 +114,31 @@ macOSはビルド・OS認証API利用可否・実ウィンドウのテーマ連�
 | Escape | モーダルを閉じる |
 
 標準メニューバーの「編集」「ウィンドウ」からも実行できます。未保存のモーダル入力がある場合、⌘Q・⌘W・ウィンドウの閉じるボタンでは破棄確認を出します。保存済みの企業データは保持します。取り消し／やり直しはテキスト編集用で、企業の削除や取り込みを戻す操作ではありません。
+
+## 開発・保守と公開準備
+
+現在は2.0.0のローカル検証段階です。Google Drive同期は未実装です。配布リポジトリ作成、push、公開リリースは行っていません。
+
+変更はPull Requestで確認し、`npm ci --ignore-scripts`、`npm test`、`npm run security:audit`、`npm run sbom`を実行してください。UIを変更した場合は該当する`check-*.cjs`の画面確認も行います。個人DB・実プロフィール・認証情報を再現手順やテストデータに入れません。貢献コードには本リポジトリのMITライセンスを適用します。初期保守担当はリポジトリ所有者で、共同保守者の追加・リリース承認は所有者が判断します。非互換変更やデータ形式変更は、変更理由と移行・復旧方法をPRに記載します。
+
+`.github/workflows/ci.yml`はmacOS・Windows・Linuxのテスト、依存監査、SBOM生成を定義しています。ActionsはコミットSHAで固定し、標準権限を読み取りのみにし、チェックアウトに認証情報を残しません。候補パッケージの作成は手動起動です。GitHub上ではまだ実行していません。Dependabotは週次でnpm・Actions・NuGetの更新PRを作る設定で、自動マージしません。SDK更新時は`dependencies.cjs`の許可バージョンとライセンス・インストール処理も再確認します。
+
+GitHubへ登録した後は、非公開の脆弱性報告、保守者の2要素認証、Actions権限、main保護を設定してください。`.github/main-ruleset.json`はmainの直接更新・削除・force-pushを制限し、3 OSのチェックと別担当者1名のレビューを要求する設定案です。**未適用で、単独保守ではレビュー要件を満たせません。** 公開前に共同レビュー体制を用意してください。利用するGitHubプランで使える保護機能も確認します。
+
+### 脆弱性の報告と対応方針
+
+正式リポジトリの公開前に、GitHub Security → Report a vulnerabilityから非公開で報告できる状態を用意します。現在はリポジトリも報告窓口も未設定です。公開Issueにトークン・DB・個人情報や未修正の攻撃手順を投稿しないでください。窓口開設後の目標は、受領確認3営業日、初期評価7日、重大な問題14日・高リスク30日・その他90日以内の修正または対応計画です。これは個人開発の目標であり、保証付きSLAではありません。公開時期は報告者と調整し、修正版とアドバイザリーで対象バージョン・回避策を示します。公開後のサポート対象は最新の安定版系列とし、終了は事前告知します。現在の未公開版に継続サポートの保証はありません。
+
+### パッケージ・SBOM・署名
+
+更新側とビルド側は同じ命名関数を使います。例は`job-tracker-2.0.0-mac-arm64.dmg`、`job-tracker-2.0.0-win-x64.exe`、`job-tracker-2.0.0-linux-amd64.deb`、`job-tracker-2.0.0-linux-x86_64.rpm`です。Windowsのportable ZIPは`-portable.zip`で終わります。Windowsの作成は`./platforms/windows/build.ps1 -Runtime win-x64`、Inno Setup導入済み環境では`-BuildInstaller`も指定できます。Windowsの依存は`packages.lock.json`と`--locked-mode`で固定します。
+
+`npm run sbom`はnpm標準のCycloneDX 1.5形式を出力し、各ビルドでも対象OS用のSBOMと`SHA256SUMS`・`release-manifest.json`を同梱します。SBOMの対象はインストール済みnpm依存です。SDK内蔵ランタイムの内部構成、NuGet、OS・共有Node/.NET/WebViewの全構成を網羅するものではありません。それらのライセンスと脆弱性は別途確認が必要です。`SHA256SUMS`は`shasum -a 256 -c SHA256SUMS`などで照合できますが、同じ場所で配るハッシュだけでは配布者を証明できません。更新JSONの署名済みフラグも署名証明として信用しません。
+
+`npm run release:check -- --candidate`は候補のファイル名・ハッシュ・SBOM・対象CPUのCopilotランタイムを確認します。通常の`npm run release:check`はさらに作業ツリー、実際のmacOS署名・公証、リポジトリ設定と運用担当者の確認を要求し、未設定では失敗します。設定先は`.github/release-policy.json`です。運用確認フラグは担当者の申告であり、GitHub設定をサーバーから検証した証拠にはなりません。Windows/Linux候補を調べる場合は`dist/win-x64`や`dist/linux-x64`を引数に渡します。通常モードの公開判定は現状macOS向けで、他OSを公開可と判定しません。
+
+macOSの署名準備は`node scripts/sign-macos.cjs`で確認できます。既定はドライランです。Developer ID、Team ID、設定済みnotarytoolプロファイルを明示し、`--execute`を付けた場合のみ別フォルダへ署名・公証します。既存の署名済みフォルダは上書きしません。内包コードを内側から署名し、Copilot実行ファイルにだけJIT entitlementを付けます。実証明書による署名、公証後の起動・Copilot生成は未検証です。[Appleの公証手順](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)に従って最終確認してください。
+
+Windowsの`platforms/windows/sign.ps1`も既定はドライランで、`dist/`内のexe/dll・明示した証明書拇印・HTTPSタイムスタンプURLだけを受け付けます。`-Execute`時に署名と発行者照合を行います。ホストと必要な内包コードを署名後にZIP・インストーラーを作り、インストーラーも署名してからハッシュを更新します。証明書とWindows実機がないため未検証です。どちらのスクリプトもGitHubへの公開は行いません。
+
+OSPS監査資料の指摘は改善の参考にしていますが、全項目適合やリスクゼロとは判定していません。署名・公証、アイコンの再配布許諾、内蔵ランタイムのライセンス、実Copilot認証・生成、Windows/Linux実機での起動確認が完了するまで公開準備完了とは扱いません。内部仕様・作業記録は`docs/`に集約し、Gitの対象外です。

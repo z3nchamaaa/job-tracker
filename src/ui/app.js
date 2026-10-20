@@ -53,6 +53,8 @@
     },
     chatGptModels: [{ slug: 'gpt-5-mini', displayName: 'Standard Fast' }],
     selectedModel: 'gpt-5-mini',
+    copilotSession: { connected: false, clientId: '', models: [], quota: null, generating: false },
+    selectedCopilotModel: 'auto',
     tableFilter: {
       query: '',
       status: 'ALL',
@@ -1680,6 +1682,9 @@
         } catch {}
       }
     } catch {}
+    try { state.copilotSession = await ipcInvoke('getCopilotStatus'); }
+    catch (error) { state.copilotSession = { connected: false, clientId: '', models: [], quota: null, error: error.message }; }
+    if (state.activeModal !== parent || (trigger && !trigger.isConnected)) return;
     const dirty = state.modalDirty, lastFocus = state.lastFocusElement;
     if (parent) { parent.id = 'suspended-prompt-modal'; parent.inert = true; parent.setAttribute('aria-hidden', 'true'); }
     const child = document.createElement('div'); child.id = 'modal-root'; child.className = 'modal-root is-hidden';
@@ -1689,13 +1694,25 @@
       <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="agent-register-title">
         <div class="modal-header"><h2 id="agent-register-title" class="modal-title">各種エージェントを登録する</h2><button type="button" class="btn btn-ghost" data-modal-close aria-label="閉じる">✕</button></div>
         <div class="modal-body">
+          <div class="panel copilot-panel">
+            <div class="panel-header"><h3 class="panel-title">GitHub Copilot 連携</h3><span id="copilot-status-badge" class="chip">状態確認中</span></div>
+            <p class="settings-note">あなたのCopilot契約の利用枠を使います。対象プラン・組織ポリシーに従い、追加利用の設定によっては課金されます。既存CLIのログインは流用しません。</p>
+            <form id="copilot-setup-form" class="copilot-setup-form">
+              <label class="form-field"><span class="form-label">このアプリ専用のGitHub OAuth AppのClient ID</span><input id="copilot-client-id" class="input" value="${escapeHtml(state.copilotSession.clientId || '')}" maxlength="100" autocomplete="off" spellcheck="false" placeholder="Client Secretは入力しません" required></label>
+              <button type="submit" class="btn btn-sm btn-outlined">Client IDを保存</button>
+            </form>
+            <p class="settings-note">OAuth Appの「Enable Device Flow」を有効にしてください。Client IDは公開識別子です。ログイントークンはOSの保護機能で暗号化します。</p>
+            <button type="button" id="copilot-open-setup" class="btn btn-xs btn-outlined">GitHubのOAuth App設定を開く ↗</button>
+            <div id="copilot-controls" class="copilot-controls"></div>
+            <p id="copilot-message" role="status" aria-live="polite"></p>
+          </div>
           <div class="panel" style="margin-bottom:14px">
             <div class="panel-header" style="margin-bottom:6px">
               <h3 class="panel-title" style="font-size:0.95rem">公式 ChatGPT 連携</h3>
               <span id="cg-status-badge" class="chip">状態確認中</span>
             </div>
             <p class="settings-note" style="margin:0 0 10px;font-size:0.78rem">
-              OpenAI 公式「Sign in with ChatGPT」(OAuth 2.0 + PKCE / <code>chatgpt.tokens.use.direct</code>) による連携です。ChatGPT Plus/Team/Pro等の利用枠を活用できます。
+              ChatGPTアカウントで接続します。利用できるプランや機能はOpenAI側の条件に従います。実アカウントでの接続・生成は未検証です。
             </p>
             <div id="cg-controls" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px"></div>
           </div>
@@ -1738,6 +1755,52 @@
       const message = root.querySelector('#agent-register-message');
       root.addEventListener('jt-modal-close', () => { form.querySelector('#agent-key').value = ''; }, { once: true });
       let busy = false;
+      let copilotBusy = false, copilotPoll = null;
+      const cpForm = root.querySelector('#copilot-setup-form');
+      const cpMessage = root.querySelector('#copilot-message');
+      const renderCopilot = () => {
+        if (!root.contains(cpForm)) return;
+        const s = state.copilotSession;
+        root.querySelector('#copilot-status-badge').textContent = s.connected ? `接続済み（${s.login || 'GitHub'}）` : s.signingIn ? 'GitHubでの承認待ち' : '未接続';
+        cpForm.querySelectorAll('input,button').forEach((el) => { el.disabled = copilotBusy || s.signingIn || s.generating; });
+        const controls = root.querySelector('#copilot-controls');
+        controls.innerHTML = s.signingIn ? `<div class="copilot-device-code"><span>GitHubで次のコードを入力してください</span><strong>${escapeHtml(s.userCode || '取得中…')}</strong><button type="button" class="btn btn-sm btn-primary" id="copilot-open-device" ${s.userCode ? '' : 'disabled'}>GitHubで承認する ↗</button><button type="button" class="btn btn-sm btn-outlined" id="copilot-cancel-login">認証を中断</button></div>`
+          : s.connected ? `<p class="settings-note">生成は元の企業追加画面から実行できます。モデル一覧・残り利用枠は下のボタンで確認できます。</p><button type="button" class="btn btn-sm btn-outlined" id="copilot-details" ${copilotBusy ? 'disabled' : ''}>モデル・利用枠を確認</button><button type="button" class="btn btn-sm btn-outlined" id="copilot-usage">GitHubの利用状況 ↗</button><button type="button" class="btn btn-sm btn-outlined" id="copilot-signout" ${copilotBusy ? 'disabled' : ''}>連携を解除</button><div class="copilot-quota">${s.quota === null ? '<p class="settings-note">残り利用枠は未取得です。取得できない場合はGitHubの利用状況で確認してください。</p>' : (s.quota || []).map((q) => `<p class="settings-note">${escapeHtml(({ chat: 'チャット', completions: '補完', premium_interactions: 'プレミアム利用枠', ai_credits: 'AIクレジット' })[q.key] || q.key)}：${q.unlimited ? '上限なし' : q.remainingPercentage === null ? '残量不明' : `残り ${q.remainingPercentage}%`}${q.resetDate ? ` ／ リセット ${escapeHtml(q.resetDate)}` : ''}</p>`).join('') || '<p class="settings-note">利用枠の情報がありません。</p>'}</div>`
+          : `<button type="button" class="btn btn-sm btn-primary" id="copilot-login" ${!s.clientId || !s.runtimeAvailable || copilotBusy ? 'disabled' : ''}>GitHubでCopilotにログイン</button>${s.runtimeAvailable === false ? '<p class="settings-note">このOS用のCopilotランタイムがありません。対象OSでnpm ciを実行してください。</p>' : ''}`;
+        if (s.error) cpMessage.textContent = s.error;
+        controls.querySelector('#copilot-open-device')?.addEventListener('click', () => openSafeExternalUrl('https://github.com/login/device'));
+        controls.querySelector('#copilot-usage')?.addEventListener('click', () => openSafeExternalUrl('https://github.com/settings/copilot'));
+        controls.querySelector('#copilot-login')?.addEventListener('click', () => copilotAction('beginCopilotLogin'));
+        controls.querySelector('#copilot-cancel-login')?.addEventListener('click', () => copilotAction('cancelCopilotLogin'));
+        controls.querySelector('#copilot-signout')?.addEventListener('click', () => copilotAction('signOutCopilot'));
+        controls.querySelector('#copilot-details')?.addEventListener('click', () => copilotAction('getCopilotDetails'));
+      };
+      const pollCopilot = () => {
+        clearTimeout(copilotPoll);
+        if (!root.contains(cpForm) || !state.copilotSession.signingIn) return;
+        copilotPoll = setTimeout(async () => {
+          try { state.copilotSession = await ipcInvoke('getCopilotStatus'); renderCopilot(); pollCopilot(); }
+          catch (error) { if (root.contains(cpForm)) cpMessage.textContent = error.message; }
+        }, 1000);
+      };
+      const copilotAction = async (method, args) => {
+        if (copilotBusy) return;
+        copilotBusy = true; cpMessage.textContent = '処理しています…'; renderCopilot();
+        try {
+          await ipcInvoke(method, args);
+          state.copilotSession = await ipcInvoke('getCopilotStatus');
+          if (method === 'signOutCopilot' || method === 'configureCopilot') state.selectedCopilotModel = 'auto';
+          if (root.contains(cpForm)) {
+            cpMessage.textContent = method === 'configureCopilot' ? '保存しました。ログインボタンからGitHubで承認してください。' : method === 'signOutCopilot' ? 'このアプリの連携を解除しました。GitHub側の認可取消はOAuth App設定から行えます。' : '';
+            if (method === 'configureCopilot') state.modalDirty = ['#agent-name', '#agent-model', '#agent-key'].some((selector) => root.querySelector(selector).value.trim());
+          }
+        } catch (error) { if (root.contains(cpForm)) cpMessage.textContent = error.message; }
+        finally { copilotBusy = false; renderCopilot(); pollCopilot(); }
+      };
+      cpForm.addEventListener('submit', (event) => { event.preventDefault(); copilotAction('configureCopilot', { clientId: root.querySelector('#copilot-client-id').value.trim() }); });
+      root.querySelector('#copilot-open-setup').addEventListener('click', () => openSafeExternalUrl('https://github.com/settings/developers'));
+      root.addEventListener('jt-modal-close', () => { clearTimeout(copilotPoll); ipcInvoke('cancelCopilotLogin').catch(() => {}); if (copilotBusy) ipcInvoke('cancelCopilotGeneration').catch(() => {}); }, { once: true });
+      renderCopilot(); pollCopilot();
 
       const renderChatGptControls = () => {
         const badge = root.querySelector('#cg-status-badge');
@@ -1993,12 +2056,13 @@
         const jsonInput = root.querySelector('#pa-json-input');
         const previewArea = root.querySelector('#pa-preview-area');
         const saveBtn = root.querySelector('#btn-save-draft-company');
-        let apiGenerating = false, apiSelected = '';
+        let apiGenerating = false, copilotGenerating = false, apiSelected = '';
         const refreshAgents = async () => {
           const controls = root.querySelector('#api-agent-controls');
           if (!controls) return;
           try {
             const data = await ipcInvoke('getAiAgents');
+            try { state.copilotSession = await ipcInvoke('getCopilotStatus'); } catch { state.copilotSession.connected = false; }
             let session = state.chatGptSession;
             try {
               const s = await ipcInvoke('getSession');
@@ -2022,24 +2086,21 @@
             if (!root.contains(controls)) return;
 
             const isCgAvailable = Boolean(session.connected && session.sharing);
+            const isCopilotAvailable = Boolean(state.copilotSession.connected && state.copilotSession.runtimeAvailable);
             const hasAgents = Array.isArray(data.agents) && data.agents.length > 0;
 
-            if (!isCgAvailable && !hasAgents) {
-              controls.innerHTML = '<p class="settings-note">「各種エージェントを登録する」から、公式ChatGPTの連携やAPI接続先（OpenAI、Claude、Gemini等）を追加できます。</p>';
+            if (!isCgAvailable && !isCopilotAvailable && !hasAgents) {
+              controls.innerHTML = '<p class="settings-note">「各種エージェントを登録する」から、GitHub Copilot・公式ChatGPTの連携やAPI接続先（OpenAI、Claude、Gemini等）を追加できます。</p>';
               return;
             }
 
-            if (apiSelected === 'chatgpt' && !isCgAvailable) {
-              apiSelected = hasAgents ? data.agents[0].id : '';
-            } else if (apiSelected && apiSelected !== 'chatgpt' && !data.agents.some((a) => a.id === apiSelected)) {
-              apiSelected = isCgAvailable ? 'chatgpt' : (data.agents[0]?.id || '');
-            } else if (!apiSelected) {
-              apiSelected = isCgAvailable ? 'chatgpt' : (data.agents[0]?.id || '');
-            }
+            const selections = [...(isCgAvailable ? ['chatgpt'] : []), ...(isCopilotAvailable ? ['copilot'] : []), ...data.agents.map((a) => a.id)];
+            if (!selections.includes(apiSelected)) apiSelected = selections[0] || '';
 
             const currentModelName = state.chatGptModels.find((m) => m.slug === state.selectedModel)?.displayName || state.selectedModel || 'ChatGPT';
 
             const selectOptions = [];
+            if (isCopilotAvailable) selectOptions.push(`<optgroup label="GitHub連携"><option value="copilot" ${apiSelected === 'copilot' ? 'selected' : ''}>GitHub Copilot ／ ${escapeHtml(state.copilotSession.login || 'GitHub')}</option></optgroup>`);
             if (isCgAvailable) {
               selectOptions.push(`
                 <optgroup label="公式連携">
@@ -2055,13 +2116,14 @@
               `);
             }
 
-            const isBusy = Boolean(apiGenerating || state.chatGptSession.generating);
+            const isBusy = Boolean(apiGenerating || copilotGenerating || state.chatGptSession.generating || state.copilotSession.generating);
 
             controls.innerHTML = `
               <div style="width:100%;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
                 <select id="api-agent-select" class="select" aria-label="生成エージェント選択" style="flex:1;min-width:220px" ${isBusy ? 'disabled' : ''}>
                   ${selectOptions.join('')}
                 </select>
+                ${apiSelected === 'copilot' ? `<select id="copilot-model-select" class="select" aria-label="Copilotモデル選択" ${isBusy ? 'disabled' : ''}><option value="auto" ${state.selectedCopilotModel === 'auto' ? 'selected' : ''}>自動選択（auto）</option>${(state.copilotSession.models || []).filter((m) => m.id !== 'auto').map((m) => `<option value="${escapeHtml(m.id)}" ${state.selectedCopilotModel === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('')}</select>` : ''}
                 ${apiSelected === 'chatgpt' && state.chatGptModels.length > 1 ? `
                   <select id="cg-model-select" class="select" style="width:auto;padding:4px 8px;font-size:0.8rem" aria-label="生成モデル選択" ${isBusy ? 'disabled' : ''}>
                     ${state.chatGptModels.map((m) => `<option value="${escapeHtml(m.slug)}" ${state.selectedModel === m.slug ? 'selected' : ''}>${escapeHtml(m.displayName)} (${escapeHtml(m.slug)})</option>`).join('')}
@@ -2069,7 +2131,7 @@
                 ` : ''}
               </div>
               <p id="api-agent-billing" class="settings-note"></p>
-              ${apiSelected === 'chatgpt' ? `
+              ${apiSelected === 'copilot' ? `<button type="button" id="btn-copilot-generate" class="btn btn-primary" ${isBusy ? 'disabled' : ''}>このプロンプトをCopilotへ送信して生成</button><button type="button" id="btn-copilot-cancel" class="btn btn-outlined" ${copilotGenerating ? '' : 'hidden'}>生成を中断</button>` : apiSelected === 'chatgpt' ? `
                 <button type="button" id="btn-cg-generate" class="btn btn-primary" ${state.chatGptSession.generating ? 'disabled' : ''}>
                   ${state.chatGptSession.generating ? '生成中...' : '✦ AIで企業JSONを自動生成'}
                 </button>
@@ -2078,7 +2140,7 @@
                 <button type="button" id="btn-api-agent-generate" class="btn btn-primary" ${apiGenerating ? 'disabled' : ''}>このプロンプトを送信して生成</button>
                 <button type="button" id="btn-api-agent-cancel" class="btn btn-outlined" ${apiGenerating ? '' : 'hidden'}>生成を中断</button>
               `}
-              <p class="settings-note">${apiSelected === 'chatgpt' ? '表示中の企業名・共通プロンプト（就活プロフィールを含む）をChatGPTへ送信します。生成結果は下のプレビューで確認してから登録してください。' : '表示中の企業名・共通プロンプト（就活プロフィールを含む）を選択した提供元へ送信します。生成結果は下のプレビューで確認してから登録してください。'}</p>
+              <p class="settings-note">${apiSelected === 'copilot' ? '表示中の共通プロンプト（就活プロフィールを含む）をGitHub Copilotへ送信し、あなたの契約の利用枠を消費します。生成結果はプレビューで確認してから登録してください。' : apiSelected === 'chatgpt' ? '表示中の企業名・共通プロンプト（就活プロフィールを含む）をChatGPTへ送信します。生成結果は下のプレビューで確認してから登録してください。' : '表示中の企業名・共通プロンプト（就活プロフィールを含む）を選択した提供元へ送信します。生成結果は下のプレビューで確認してから登録してください。'}</p>
             `;
 
             const select = controls.querySelector('#api-agent-select');
@@ -2090,6 +2152,7 @@
             }
 
             const modelSelect = controls.querySelector('#cg-model-select');
+            controls.querySelector('#copilot-model-select')?.addEventListener('change', (event) => { state.selectedCopilotModel = event.target.value; });
             if (modelSelect) {
               modelSelect.addEventListener('change', (e) => {
                 state.selectedModel = e.target.value;
@@ -2099,7 +2162,9 @@
 
             const billingEl = controls.querySelector('#api-agent-billing');
             if (billingEl) {
-              if (apiSelected === 'chatgpt') {
+              if (apiSelected === 'copilot') {
+                billingEl.textContent = 'Copilot契約の利用枠を使用します。Web検索・ファイル操作・コマンド実行は無効です。追加利用の課金条件はGitHubで確認してください。';
+              } else if (apiSelected === 'chatgpt') {
                 billingEl.textContent = 'ChatGPTプラン利用枠を使用（Web検索あり）';
               } else {
                 const a = data.agents.find((a) => a.id === apiSelected);
@@ -2110,7 +2175,29 @@
               }
             }
 
-            if (apiSelected === 'chatgpt') {
+            if (apiSelected === 'copilot') {
+              const button = controls.querySelector('#btn-copilot-generate'), cancel = controls.querySelector('#btn-copilot-cancel');
+              cancel.addEventListener('click', () => ipcInvoke('cancelCopilotGeneration').catch((error) => showToast(error.message, 'error')));
+              button.addEventListener('click', async () => {
+                if (apiGenerating || copilotGenerating || state.chatGptSession.generating || state.copilotSession.generating) return;
+                if (!nameInput.value.trim()) { showToast('企業名を入力してください。', 'error'); return; }
+                copilotGenerating = true; state.copilotSession.generating = true;
+                button.disabled = true; select.disabled = true; cancel.hidden = false;
+                parsedDraft = null; saveBtn.disabled = true; previewArea.replaceChildren();
+                const locked = [nameInput, jsonInput, root.querySelector('#btn-fill-sample-json'), root.querySelector('#btn-validate-json'), root.querySelector('#btn-register-agents'), controls.querySelector('#copilot-model-select')].filter(Boolean);
+                locked.forEach((el) => { el.disabled = true; });
+                try {
+                  const text = await ipcInvoke('generateWithCopilot', { model: state.selectedCopilotModel, input: updatePromptBox() });
+                  if (state.activeModal !== root || !root.contains(jsonInput)) return;
+                  jsonInput.value = text; state.modalDirty = true; runJsonPreview();
+                  showToast('Copilotの生成が完了しました。内容と出典を確認してください。', 'success');
+                } catch (error) { if (root.contains(jsonInput)) showToast(error.message, 'error'); }
+                finally {
+                  copilotGenerating = false; state.copilotSession.generating = false;
+                  if (root.contains(jsonInput)) { button.disabled = false; select.disabled = false; cancel.hidden = true; locked.forEach((el) => { el.disabled = false; }); }
+                }
+              });
+            } else if (apiSelected === 'chatgpt') {
               const cgGenBtn = controls.querySelector('#btn-cg-generate');
               const cgCancelBtn = controls.querySelector('#btn-cg-cancel-gen');
               cgCancelBtn?.addEventListener('click', async () => {
@@ -2119,7 +2206,7 @@
                 refreshAgents();
               });
               cgGenBtn?.addEventListener('click', async () => {
-                if (apiGenerating || state.chatGptSession.generating) return;
+                if (apiGenerating || copilotGenerating || state.chatGptSession.generating || state.copilotSession.generating) return;
                 const cname = nameInput.value.trim();
                 if (!cname) { showToast('企業名を入力してください。', 'error'); return; }
                 const doGenerate = async () => {
@@ -2150,6 +2237,7 @@
                   } finally {
                     state.chatGptSession.generating = false;
                     await refreshAgents();
+                    if (!root.contains(jsonInput)) return;
                     const inputs = [nameInput, jsonInput, root.querySelector('#btn-fill-sample-json'), root.querySelector('#btn-validate-json')];
                     inputs.forEach((el) => { el.disabled = false; });
                     const register = root.querySelector('#btn-register-agents');
@@ -2163,7 +2251,7 @@
               const apiCancelBtn = controls.querySelector('#btn-api-agent-cancel');
               apiCancelBtn?.addEventListener('click', () => ipcInvoke('cancelAiAgentGeneration').catch((e) => showToast(e.message, 'error')));
               apiGenBtn?.addEventListener('click', async () => {
-                if (apiGenerating || state.chatGptSession.generating) return;
+                if (apiGenerating || copilotGenerating || state.chatGptSession.generating || state.copilotSession.generating) return;
                 if (!nameInput.value.trim()) { showToast('企業名を入力してください。', 'error'); return; }
                 apiGenerating = true; apiGenBtn.disabled = true; select.disabled = true; apiCancelBtn.hidden = false;
                 parsedDraft = null; saveBtn.disabled = true; previewArea.replaceChildren();
@@ -2189,12 +2277,16 @@
             if (root.contains(controls)) controls.textContent = error.message;
           }
         };
-        root.querySelector('#btn-register-agents').addEventListener('click', (event) => {
-          if (!apiGenerating && !state.chatGptSession.generating) openAgentRegistrationModal(event.currentTarget, refreshAgents);
+        root.querySelector('#btn-register-agents').addEventListener('click', async (event) => {
+          if (apiGenerating || copilotGenerating || state.chatGptSession.generating || state.copilotSession.generating) return;
+          const button = event.currentTarget; button.disabled = true;
+          try { await openAgentRegistrationModal(button, refreshAgents); }
+          finally { if (button.isConnected) button.disabled = false; }
         });
         root.addEventListener('jt-modal-close', () => {
           if (apiGenerating) ipcInvoke('cancelAiAgentGeneration').catch(() => {});
           if (state.chatGptSession?.generating) ipcInvoke('cancelGenerate').catch(() => {});
+          if (copilotGenerating) ipcInvoke('cancelCopilotGeneration').catch(() => {});
         }, { once: true });
         refreshAgents();
 

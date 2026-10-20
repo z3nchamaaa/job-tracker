@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "repository": null,
+  "macTeamId": null,
+  "windowsCertificateThumbprint": null,
+  "operatorConfirmations": {
+    "privateVulnerabilityReportingEnabled": false,
+    "mainRulesetEnabled": false,
+    "maintainerTwoFactorAuthenticationEnabled": false,
+    "iconRedistributionPermissionConfirmed": false,
+    "nativeRuntimeLicensesReviewed": false,
+    "realCopilotAuthorizationAndGenerationVerified": false
+  }
+}

@@ -3,6 +3,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const { artifactName } = require('./artifact-names.cjs');
 
 const MAX_PACKAGE_BYTES = 300 * 1024 * 1024;
 const ALLOWED_REDIRECT_HOSTS = Object.freeze([
@@ -27,19 +28,8 @@ function isNewerVersion(candidate, current) {
 }
 
 function expectedPackageName(tag, platform, arch, format) {
-  const ver = String(tag || "").replace(/^v/, "");
-  if (!parseSemver(ver)) return null;
-  if (platform === "win32" && (arch === "x64" || arch === "arm64")) {
-    return `job-tracker-${ver}-win-${arch}.exe`;
-  }
-  if (platform === "darwin" && arch === "arm64") {
-    return `job-tracker-${ver}-mac-arm64.dmg`;
-  }
-  if (platform === "linux" && arch === "x64") {
-    const ext = format === "rpm" ? "rpm" : "deb";
-    return `job-tracker-${ver}-linux-${ext === "rpm" ? "x86_64.rpm" : "amd64.deb"}`;
-  }
-  return null;
+  try { return artifactName(tag, platform, arch, platform === 'darwin' ? 'dmg' : platform === 'win32' ? 'exe' : format === 'rpm' ? 'rpm' : 'deb'); }
+  catch { return null; }
 }
 
 function isSafeRedirect(rawUrl, allowLoopbackTest = false) {
@@ -257,7 +247,8 @@ class AppUpdater {
         throw new Error("この端末向けの検証可能な更新ファイルが見つかりませんでした。");
       }
 
-      const codeSigned = Boolean(release.code_signed === true);
+      // GitHub release JSON cannot prove the downloaded file's signing identity.
+      const codeSigned = false;
 
       this.selection = Object.freeze({
         tag: release.tag_name,

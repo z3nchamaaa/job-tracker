@@ -13,8 +13,11 @@
     "test": "node --test test/*.test.cjs",
     "build": "node scripts/build.cjs",
     "screenshots": "node scripts/capture-screenshots.cjs",
-    "security:audit": "node scripts/security-audit.cjs"
+    "security:audit": "node scripts/security-audit.cjs",
+    "sbom": "node scripts/sbom.cjs",
+    "release:check": "node scripts/release-check.cjs"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@github/copilot-sdk": "1.0.23"
+  }
 }
