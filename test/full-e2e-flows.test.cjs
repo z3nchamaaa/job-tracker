@@ -378,17 +378,25 @@ test('All 8 selection statuses, early selection lane deduplication vs terminal l
   }
 });
 
-test('WebView host origin policy & external URL launch restrictions (macOS, Windows, Linux, and backend openExternal)', async () => {
+test('Linux host origin policy self-test', (t) => {
   const { execFileSync } = require('node:child_process');
-  const { createAppServer } = require('../src/backend/server.cjs');
-
-  // 1. Execute Linux host origin policy self-test via python3
-  const linuxOut = execFileSync(
+  let linuxOut;
+  try { linuxOut = execFileSync(
     'python3',
     [path.join(__dirname, '..', 'platforms', 'linux', 'job-tracker-host.py'), '--test-origin-policy'],
     { encoding: 'utf8', timeout: 5000 }
-  );
+  ); } catch (error) {
+    if (process.platform === 'win32' && error.code === 'ENOENT') {
+      t.skip('python3 is not installed on this Windows host');
+      return;
+    }
+    throw error;
+  }
   assert.match(linuxOut, /ORIGIN_POLICY_SELF_TEST_OK/);
+});
+
+test('WebView host origin policy & external URL launch restrictions (macOS, Windows, Linux, and backend openExternal)', async () => {
+  const { createAppServer } = require('../src/backend/server.cjs');
 
   // 2. Verify static source invariants across macOS, Windows, and Linux hosts
   const macSwift = fs.readFileSync(path.join(__dirname, '..', 'platforms', 'macos', 'Host.swift'), 'utf8');
