@@ -28,6 +28,6 @@ test('Cross-platform staging excludes the host native Copilot runtime from other
   const target = process.platform === 'darwin' ? 'windows' : 'macos';
   const files = dependencyFiles(target, process.arch);
   assert(files.includes(path.join('node_modules', '@github/copilot-sdk', 'package.json')));
-  assert(!files.some((f) => f.includes(`@github/copilot-sdk-${process.platform}-${process.arch}/`)));
-  assert(!files.some((f) => /(^|\/)\.|\.(db|enc|key|pem)$/.test(f)));
+  assert(!files.some((f) => f.includes(path.join('@github', `copilot-sdk-${process.platform}-${process.arch}`) + path.sep)));
+  assert(!files.some((f) => /(^|[\\/])\.|\.(db|enc|key|pem)$/.test(f)));
 });

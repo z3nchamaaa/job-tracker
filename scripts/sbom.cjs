@@ -28,6 +28,18 @@ function generateSbom(directory, output) {
   // npm may include repository author email from dependency metadata. That is
   // public upstream metadata, but it is unnecessary for this app's inventory.
   for (const component of [bom.metadata.component, ...bom.components]) delete component.author;
+  for (const component of bom.components) {
+    if (!/^@github\/copilot-sdk-(darwin|linux|linuxmusl|win32)-(arm64|x64)$/.test(component.name)) continue;
+    if (!fs.existsSync(path.join(cwd, 'licenses/Copilot-CLI.txt'))) throw new Error('Copilot CLI license notice is missing from staged application');
+    component.licenses = [
+      { license: { id: 'MIT' } },
+      { license: { name: 'GitHub Copilot CLI License', url: 'https://github.com/github/copilot-cli/blob/v1.0.100/LICENSE.md' } },
+    ];
+    component.properties = [...(component.properties || []), {
+      name: 'job-tracker:license-scope',
+      value: 'MIT applies to npm wrapper metadata; the bundled Copilot CLI is separately licensed under GitHub Copilot CLI License. These are separate components, not an offer to use the CLI under MIT.',
+    }];
+  }
   if (output) { fs.mkdirSync(path.dirname(output), { recursive: true }); fs.writeFileSync(output, JSON.stringify(bom, null, 2) + '\n'); }
   return bom;
 }
