@@ -13,7 +13,7 @@ const fixture = (t) => {
   return { dir, store: new AppSettingsStore(dir) };
 };
 
-test('Settings persist independently, validate strictly, reject corrupt/symlink files, and default lock to off', (t) => {
+test('Settings persist independently, validate strictly, reject corrupt files, and default lock to off', (t) => {
   const { dir, store } = fixture(t);
   assert.equal(store.read().lockOnStartup, false);
   store.savePatch({ theme: 'dark', accent: 'blue', lockOnStartup: true });
@@ -22,11 +22,23 @@ test('Settings persist independently, validate strictly, reject corrupt/symlink 
   assert.equal(store.read().lockOnStartup, true);
   fs.writeFileSync(store.file, '{');
   assert.throws(() => store.read(), /起動を停止/);
-  fs.unlinkSync(store.file);
+  assert.equal(fs.readFileSync(store.file, 'utf8'), '{');
+});
+
+test('Settings reject symlink files', (t) => {
+  const { dir, store } = fixture(t);
   const other = path.join(dir, 'other.json');
   fs.writeFileSync(other, JSON.stringify({ version: 1, theme: 'light', accent: 'purple', lockOnStartup: false }));
-  fs.symlinkSync(other, store.file);
+  try { fs.symlinkSync(other, store.file); }
+  catch (error) {
+    if (process.platform === 'win32' && error.code === 'EPERM') {
+      t.skip('Windows file symlink creation requires privileges unavailable to this process');
+      return;
+    }
+    throw error;
+  }
   assert.throws(() => store.read(), /起動を停止/);
+  assert.equal(JSON.parse(fs.readFileSync(other, 'utf8')).lockOnStartup, false);
 });
 
 test('Lock changes require OS verification both ways; cancelled auth cannot persist any settings; concurrent changes rejected', async (t) => {
