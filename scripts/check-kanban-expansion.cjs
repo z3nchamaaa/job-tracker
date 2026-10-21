@@ -18,6 +18,9 @@ const { launchPage } = require('./browser.cjs');
     app.dbStore.createCompany({ name: '架空の通常最終面接企業', status: 'FINAL' });
     const { bootstrapUrl } = await app.start(0);
     browser = await launchPage(bootstrapUrl, { width: 1440, height: 900 });
+    // CI runners may inherit an OS reduced-motion preference. Exercise the
+    // animated path explicitly here, then test reduced motion separately below.
+    await browser.call('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
     const evaluate = (code) => browser.evaluate(code);
     const wait = async (code) => {
       for (let i = 0; i < 120; i++) {
