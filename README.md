@@ -2,16 +2,19 @@
 
 企業、選考、面接記録、予定、待遇比較をローカルで管理するデスクトップアプリです。通常の管理操作はオフラインで使えます。AI通信と更新確認にはネットワークが必要です。
 
-確認日：2026-10-20。macOS Apple Siliconを検証対象としています。WindowsとLinuxの実機動作、実アカウントでのChatGPT接続は未検証です。仕様書・設計書・詳細な検証記録はローカルの `docs/` に保管し、Gitの管理対象から除外しています。
+**開発中のソース公開版です。** Windowsの取り込み処理で`fsync EPERM`、macOSのCIでカンバンのアニメーション検査が失敗しています。これらのエラー・ビルド失敗は現在未修正です。安定版アプリや全OSでの動作を保証する公開ではありません。
+
+確認日：2026-10-21。macOS Apple Siliconを検証対象としています。WindowsとLinuxの実機動作、実アカウントでのChatGPT接続は未検証です。仕様書・設計書・詳細な検証記録はローカルの `docs/` に保管し、Gitの管理対象から除外しています。
 
 ## 起動
 
 Node.js **24.15.0以上**が必要です。実際に検証した版は26.11.1です。最低版はAPI互換条件であり、安全な最新版を示すものではありません。NodeとOSを保守対象の更新版に保ってください。Nodeは配布物に同梱していません。
 
-macOSのビルド済みアプリは `dist/mac-arm64/就活トラッカー.app`。DMGまたはZIPも同じフォルダーにあります。Apple Silicon専用で、ローカル実行用のアドホック署名です。Developer ID署名・公証は行っていません。
+ローカルビルドの出力先は `dist/mac-arm64/就活トラッカー.app`。成功時はDMGまたはZIPも同じフォルダーに生成します。ビルド済みアプリはリポジトリに含めず、リリース配布もしていません。Apple Silicon専用で、ローカル実行用のアドホック署名です。Developer ID署名・公証は行っていません。
 
 ```sh
 cd job-tracker
+npm ci --ignore-scripts
 npm start
 ```
 
@@ -36,7 +39,7 @@ npm run screenshots
 
 macOSビルドにはXcode Command Line Tools、撮影とブラウザーテストにはGoogle Chromeが必要です。撮影と自動テストは一時データ領域と専用ブラウザープロファイルを使い、実データを参照しません。静的監査は脆弱性データベースを使う総合監査ではありません。
 
-Windows候補：Windows環境にNode、.NET 10 SDK、共有.NET 10 Desktop Runtime、WebView2 Runtimeを用意し `platforms/windows/build.ps1 -Runtime win-x64`（ARM64はwin-arm64）。全依存のロックファイル生成・署名確認・脆弱性監査結果・実機動作は未完了です。Linux候補：`python3 platforms/linux/package.py`。RPM作成にはrpmbuildが必要です。GTK3、WebKitGTK 4.1、PyGObject、libsecret、対応するNodeが必要で、配布先OSでの依存解決と起動は別途検証が必要です。
+Windows候補：Windows環境にNode、.NET 10 SDK、共有.NET 10 Desktop Runtime、WebView2 Runtimeを用意し `platforms/windows/build.ps1 -Runtime win-x64`（ARM64はwin-arm64）。NuGetのロックファイルは作成済みですが、署名確認・全依存の完全監査・実機動作は未完了です。Linux候補：`python3 platforms/linux/package.py`。RPM作成にはrpmbuildが必要です。GTK3、WebKitGTK 4.1、PyGObject、libsecret、対応するNodeが必要で、配布先OSでの依存解決と起動は別途検証が必要です。
 
 ## 保存と移行
 
@@ -78,7 +81,7 @@ ChatGPT連携は公式の[オープンソース向けトークン共有](https:/
 
 利用資格・モデル・残量・追加課金はGitHubの契約と組織ポリシーに依存します。[利用枠の公式説明](https://docs.github.com/en/copilot/how-tos/copilot-sdk/features/usage-and-billing)を参照してください。無料・無制限とは保証しません。実OAuth Appは未作成のため、実アカウントの承認・契約枠での生成は未検証です。SDKとの実通信は認証なしのランタイム起動まで確認しています。モデル呼び出しは模擬APIで検証します。
 
-更新画面は起動時／手動確認、通知、明示ダウンロード、ハッシュ検証、確認後の起動に対応します。正式な配布リポジトリが未確定なので既定では無効です。公開・リリースは行っていません。
+更新画面は起動時／手動確認、通知、明示ダウンロード、ハッシュ検証、確認後の起動に対応します。ソース用リポジトリは[z3nchamaaa/job-tracker](https://github.com/z3nchamaaa/job-tracker)です。署名済みアプリの配布先・更新用リリースは未設定なので、更新機能は既定で無効です。
 
 [依存とライセンス](THIRD_PARTY_NOTICES.md)。ビルド後の容量実測は `dist/size-report.json` に出力します。`dist/` はGitの管理対象外です。
 
@@ -117,17 +120,17 @@ macOSはビルド・OS認証API利用可否・実ウィンドウのテーマ連�
 
 ## 開発・保守と公開準備
 
-現在は2.0.0のローカル検証段階です。Google Drive同期は未実装です。配布リポジトリ作成、push、公開リリースは行っていません。
+現在は2.0.0の開発段階で、ソース公開と安定版アプリの配布を分けています。Google Drive同期は未実装です。リポジトリへのpushは行っていますが、アプリの公開リリースはありません。
 
 変更はPull Requestで確認し、`npm ci --ignore-scripts`、`npm test`、`npm run security:audit`、`npm run sbom`を実行してください。UIを変更した場合は該当する`check-*.cjs`の画面確認も行います。個人DB・実プロフィール・認証情報を再現手順やテストデータに入れません。貢献コードには本リポジトリのMITライセンスを適用します。初期保守担当はリポジトリ所有者で、共同保守者の追加・リリース承認は所有者が判断します。非互換変更やデータ形式変更は、変更理由と移行・復旧方法をPRに記載します。
 
-`.github/workflows/ci.yml`はmacOS・Windows・Linuxのテスト、依存監査、SBOM生成を定義しています。ActionsはコミットSHAで固定し、標準権限を読み取りのみにし、チェックアウトに認証情報を残しません。候補パッケージの作成は手動起動です。GitHub上ではまだ実行していません。Dependabotは週次でnpm・Actions・NuGetの更新PRを作る設定で、自動マージしません。SDK更新時は`dependencies.cjs`の許可バージョンとライセンス・インストール処理も再確認します。
+`.github/workflows/ci.yml`はmacOS・Windows・Linuxのテスト、依存監査、SBOM生成を定義しています。ActionsはコミットSHAで固定し、標準権限を読み取りのみにし、チェックアウトに認証情報を残しません。候補パッケージの作成は手動起動です。GitHub上で実行済みで、現時点ではWindows・macOSのチェックが失敗しています。Linuxのチェックは成功しました。失敗を無効化・成功扱いにはしません。Dependabotは週次でnpm・Actions・NuGetの更新PRを作る設定で、自動マージしません。SDK更新時は`dependencies.cjs`の許可バージョンとライセンス・インストール処理も再確認します。
 
-GitHubへ登録した後は、非公開の脆弱性報告、保守者の2要素認証、Actions権限、main保護を設定してください。`.github/main-ruleset.json`はmainの直接更新・削除・force-pushを制限し、3 OSのチェックと別担当者1名のレビューを要求する設定案です。**未適用で、単独保守ではレビュー要件を満たせません。** 公開前に共同レビュー体制を用意してください。利用するGitHubプランで使える保護機能も確認します。
+mainは[Protect main](https://github.com/z3nchamaaa/job-tracker/settings/rules/25484958)で保護しています。直接push・削除・force-pushを禁止し、PR、GitHub Actionsの3 OSチェック、最新mainへの追従、レビュー会話の解決を必須にしています。単独運用のため他者承認は0件で、バイパスはありません。`.github/main-ruleset.json`はこの運用に合わせた設定例です。CI失敗中は通常のマージがブロックされます。保守者の2要素認証は各アカウントで管理してください。
 
 ### 脆弱性の報告と対応方針
 
-正式リポジトリの公開前に、GitHub Security → Report a vulnerabilityから非公開で報告できる状態を用意します。現在はリポジトリも報告窓口も未設定です。公開Issueにトークン・DB・個人情報や未修正の攻撃手順を投稿しないでください。窓口開設後の目標は、受領確認3営業日、初期評価7日、重大な問題14日・高リスク30日・その他90日以内の修正または対応計画です。これは個人開発の目標であり、保証付きSLAではありません。公開時期は報告者と調整し、修正版とアドバイザリーで対象バージョン・回避策を示します。公開後のサポート対象は最新の安定版系列とし、終了は事前告知します。現在の未公開版に継続サポートの保証はありません。
+セキュリティ上の問題は、[Security → Advisories](https://github.com/z3nchamaaa/job-tracker/security/advisories)の「Report a vulnerability」から非公開で報告してください。ソース公開時にprivate vulnerability reportingを有効化します。公開Issueにトークン・DB・個人情報や未修正の攻撃手順を投稿しないでください。窓口開設後の目標は、受領確認3営業日、初期評価7日、重大な問題14日・高リスク30日・その他90日以内の修正または対応計画です。これは個人開発の目標であり、保証付きSLAではありません。公開時期は報告者と調整し、修正版とアドバイザリーで対象バージョン・回避策を示します。公開後のサポート対象は最新の安定版系列とし、終了は事前告知します。現在の開発版に継続サポートの保証はありません。
 
 ### パッケージ・SBOM・署名
 
@@ -137,8 +140,8 @@ GitHubへ登録した後は、非公開の脆弱性報告、保守者の2要素�
 
 `npm run release:check -- --candidate`は候補のファイル名・ハッシュ・SBOM・対象CPUのCopilotランタイムを確認します。通常の`npm run release:check`はさらに作業ツリー、実際のmacOS署名・公証、リポジトリ設定と運用担当者の確認を要求し、未設定では失敗します。設定先は`.github/release-policy.json`です。運用確認フラグは担当者の申告であり、GitHub設定をサーバーから検証した証拠にはなりません。Windows/Linux候補を調べる場合は`dist/win-x64`や`dist/linux-x64`を引数に渡します。通常モードの公開判定は現状macOS向けで、他OSを公開可と判定しません。
 
-macOSの署名準備は`node scripts/sign-macos.cjs`で確認できます。既定はドライランです。Developer ID、Team ID、設定済みnotarytoolプロファイルを明示し、`--execute`を付けた場合のみ別フォルダへ署名・公証します。既存の署名済みフォルダは上書きしません。内包コードを内側から署名し、Copilot実行ファイルにだけJIT entitlementを付けます。実証明書による署名、公証後の起動・Copilot生成は未検証です。[Appleの公証手順](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)に従って最終確認してください。
+macOSの署名準備は`node scripts/sign-macos.cjs`で確認できます。既定はドライランです。Developer ID、Team ID、設定済みnotarytoolプロファイルを明示し、`--execute`を付けた場合のみ別フォルダへ署名・公証します。既存の署名済みフォルダは上書きしません。アプリ側のコードを内側から署名します。別ライセンスのCopilot CLIには再署名やentitlement変更を行わず、ベンダーのバイナリを未改変のまま保持します。ベンダー署名のまま公証できない場合は、配布方式を見直す必要があります。実証明書による署名、公証後の起動・Copilot生成は未検証です。[Appleの公証手順](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution)に従って最終確認してください。
 
-Windowsの`platforms/windows/sign.ps1`も既定はドライランで、`dist/`内のexe/dll・明示した証明書拇印・HTTPSタイムスタンプURLだけを受け付けます。`-Execute`時に署名と発行者照合を行います。ホストと必要な内包コードを署名後にZIP・インストーラーを作り、インストーラーも署名してからハッシュを更新します。証明書とWindows実機がないため未検証です。どちらのスクリプトもGitHubへの公開は行いません。
+Windowsの`platforms/windows/sign.ps1`も既定はドライランで、`dist/`内のexe/dll・明示した証明書拇印・HTTPSタイムスタンプURLだけを受け付けます。`-Execute`時に署名と発行者照合を行います。自作ホストを署名後にZIP・インストーラーを作り、インストーラーも署名してからハッシュを更新します。Copilot CLIの実行ファイルは再署名・改変せず、ベンダーの状態を保持してください。証明書とWindows実機がないため未検証です。どちらのスクリプトもGitHubへの公開は行いません。
 
-OSPS監査資料の指摘は改善の参考にしていますが、全項目適合やリスクゼロとは判定していません。署名・公証、アイコンの再配布許諾、内蔵ランタイムのライセンス、実Copilot認証・生成、Windows/Linux実機での起動確認が完了するまで公開準備完了とは扱いません。内部仕様・作業記録は`docs/`に集約し、Gitの対象外です。
+OSPS監査資料の指摘は改善の参考にしていますが、全項目適合やリスクゼロとは判定していません。独自ソースとプロジェクト向け生成アイコンはMIT、第三者コンポーネントは[個別のライセンス](THIRD_PARTY_NOTICES.md)に従います。内包CLIはSDKのMITとは別の[GitHub Copilot CLI License](licenses/Copilot-CLI.txt)であり、各OSのステージングに全文を含めます。署名・公証、内蔵ランタイムの完全な監査、実Copilot認証・生成、Windows/Linux実機での起動確認は、安定版アプリ配布に向けて残る項目です。内部仕様・作業記録は`docs/`に集約し、Gitの対象外です。

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "repository": null,
+  "repository": "z3nchamaaa/job-tracker",
   "macTeamId": null,
   "windowsCertificateThumbprint": null,
   "operatorConfirmations": {
     "privateVulnerabilityReportingEnabled": false,
-    "mainRulesetEnabled": false,
+    "mainRulesetEnabled": true,
     "maintainerTwoFactorAuthenticationEnabled": false,
-    "iconRedistributionPermissionConfirmed": false,
+    "iconRedistributionPermissionConfirmed": true,
     "nativeRuntimeLicensesReviewed": false,
     "realCopilotAuthorizationAndGenerationVerified": false
   }
