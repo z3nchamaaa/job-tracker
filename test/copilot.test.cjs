@@ -124,15 +124,28 @@ test('Cancel and timeout stop SDK work, reject concurrent requests, suppress pro
   assert.equal(service.active, null);
 });
 
-test('Corrupted Copilot credentials and symlinks fail closed without replacement; expiry requires reauthentication', (t) => {
-  const { service, authorize, dir } = fixture(t);
+test('Corrupted Copilot credentials fail closed without replacement; expiry requires reauthentication', (t) => {
+  const { service, authorize } = fixture(t);
   authorize();
   const value = service.read(); value.expiresAt = 1; service.write(value);
   assert.equal(service.getStatus().connected, false); assert.match(service.getStatus().error, /期限/);
   fs.writeFileSync(service.file, 'corrupted');
   assert.throws(() => service.configure({ clientId: 'synthetic-client' }), /変更していません/);
   assert.equal(fs.readFileSync(service.file, 'utf8'), 'corrupted');
-  fs.rmSync(service.file); const target = path.join(dir, 'synthetic-target'); fs.writeFileSync(target, 'retained'); fs.symlinkSync(target, service.file);
+});
+
+test('Copilot credentials reject symlinks without replacing the target', (t) => {
+  const { service, dir } = fixture(t);
+  const target = path.join(dir, 'synthetic-target');
+  fs.writeFileSync(target, 'retained');
+  try { fs.symlinkSync(target, service.file); }
+  catch (error) {
+    if (process.platform === 'win32' && error.code === 'EPERM') {
+      t.skip('Windows file symlink creation requires privileges unavailable to this process');
+      return;
+    }
+    throw error;
+  }
   assert.throws(() => service.configure({ clientId: 'synthetic-client' }));
   assert.equal(fs.readFileSync(target, 'utf8'), 'retained');
 });
