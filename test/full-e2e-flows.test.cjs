@@ -380,14 +380,15 @@ test('All 8 selection statuses, early selection lane deduplication vs terminal l
 
 test('Linux host origin policy self-test', (t) => {
   const { execFileSync } = require('node:child_process');
+  const python = process.platform === 'win32' ? 'python' : 'python3';
   let linuxOut;
   try { linuxOut = execFileSync(
-    'python3',
+    python,
     [path.join(__dirname, '..', 'platforms', 'linux', 'job-tracker-host.py'), '--test-origin-policy'],
     { encoding: 'utf8', timeout: 5000 }
   ); } catch (error) {
     if (process.platform === 'win32' && error.code === 'ENOENT') {
-      t.skip('python3 is not installed on this Windows host');
+      t.skip('Python is not installed on this Windows host');
       return;
     }
     throw error;
