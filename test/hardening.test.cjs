@@ -31,12 +31,29 @@ function fixture() {
   return { dir, store, baseline, candidate, snapshotPath, snapshot: fs.readFileSync(snapshotPath) };
 }
 
-for (const fault of ['journal-write', 'snapshot-write', 'snapshot-rename', 'snapshot-rename-after', 'commit', 'profile-after-write']) {
+for (const fault of ['journal-write', 'journal-fsync', 'snapshot-write', 'snapshot-fsync', 'snapshot-rename', 'snapshot-rename-after', 'commit', 'profile-after-write']) {
   test(`Import rolls back DB, profile and previous undo snapshot on ${fault}`, () => {
     const f = fixture();
     let fired = false;
     try {
       const io = { ...fs };
+      const openFiles = new Map();
+      io.openSync = (file, ...args) => {
+        const fd = fs.openSync(file, ...args);
+        openFiles.set(fd, String(file));
+        return fd;
+      };
+      io.closeSync = (fd) => {
+        openFiles.delete(fd);
+        return fs.closeSync(fd);
+      };
+      io.fsyncSync = (fd) => {
+        const prefix = fault === 'journal-fsync' ? f.store.recoveryPath : f.snapshotPath;
+        if (!fired && fault.endsWith('-fsync') && openFiles.get(fd)?.startsWith(prefix + '.')) {
+          fired = true; throw new Error('injected fsync failure');
+        }
+        return fs.fsyncSync(fd);
+      };
       io.writeFileSync = (file, ...args) => {
         const prefix = fault === 'journal-write' ? f.store.recoveryPath : f.snapshotPath;
         if (!fired && ['journal-write', 'snapshot-write'].includes(fault) && String(file).startsWith(prefix + '.')) {
@@ -70,6 +87,10 @@ for (const fault of ['journal-write', 'snapshot-write', 'snapshot-rename', 'snap
       assert.deepEqual(f.store.exportBackup().data, f.baseline.data);
       assert.deepEqual(fs.readFileSync(f.snapshotPath), f.snapshot);
       assert.equal(fs.existsSync(f.store.recoveryPath), false);
+      assert.equal(openFiles.size, 0);
+      for (const parent of [f.dir, f.store.backupDir]) {
+        assert.equal(fs.readdirSync(parent).some((name) => name.endsWith('.tmp')), false);
+      }
       f.store.profileStore.saveProfile = originalSave;
       f.store.rollbackLastImport();
       assert.equal(f.store.listCompanies()[0].name, '架空B');
@@ -179,8 +200,8 @@ test('Distribution staging only copies allowlisted source and assets', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-stage-'));
   try {
     const files = runtimeFiles('macos');
-    assert.ok(files.includes('src/backend/db.cjs'));
-    assert.equal(files.some((f) => /(^|\/)\.|\.(db|enc|key|pem)$/.test(f)), false);
+    assert.ok(files.includes(path.join('src', 'backend', 'db.cjs')));
+    assert.equal(files.some((f) => /(^|[\\/])\.|\.(db|enc|key|pem)$/.test(f)), false);
     copyRuntime(dir, 'macos');
     assert.equal(fs.existsSync(path.join(dir, 'src/.DS_Store')), false);
     assert.equal(fs.existsSync(path.join(dir, 'src/backend/runtime.cjs')), true);

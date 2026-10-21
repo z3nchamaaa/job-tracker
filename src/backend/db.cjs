@@ -276,7 +276,9 @@ class DatabaseStore {
     const temp = `${filePath}.${crypto.randomUUID()}.tmp`;
     try {
       io.writeFileSync(temp, bytes, { mode: 0o600, flag: "wx" });
-      const fd = io.openSync(temp, "r");
+      // Windows FlushFileBuffers requires write access. Keep the completed
+      // contents intact and flush them before publishing with rename.
+      const fd = io.openSync(temp, "r+");
       try { io.fsyncSync(fd); } finally { io.closeSync(fd); }
       io.renameSync(temp, filePath);
     } finally {
