@@ -30,8 +30,14 @@ test('Agent registration and ChatGPT consolidation UI test', async (t) => {
   };
 
   let sessionState = { connected: false, sharing: false, email: null };
+  let generationCompleted = false;
   const mockChatGptService = {
-    getSession: () => ({ ...sessionState }),
+    getSession: async () => {
+      // Keep the post-generation refresh pending after the preview appears,
+      // as it is on slower CI runners. The registration button is still busy.
+      if (generationCompleted) await new Promise((resolve) => setTimeout(resolve, 150));
+      return { ...sessionState };
+    },
     listModels: async () => [{ slug: 'gpt-5-mini', displayName: 'Fast Model' }],
     signIn: async () => {
       sessionState = { connected: true, sharing: true, email: 'signed-in@example.jp' };
@@ -45,13 +51,15 @@ test('Agent registration and ChatGPT consolidation UI test', async (t) => {
     openUsage: async () => ({ opened: true }),
     cancelGenerate: () => ({ cancelled: true }),
     shutdown: () => {},
-    generate: async () =>
-      JSON.stringify({
+    generate: async () => {
+      generationCompleted = true;
+      return JSON.stringify({
         name: '株式会社E2E集約検証',
         industry: '情報通信',
         annualIncome: 620,
         sources: [],
-      }),
+      });
+    },
   };
 
   const testDriverScript = `
@@ -123,7 +131,13 @@ test('Agent registration and ChatGPT consolidation UI test', async (t) => {
         const previewHasGeneratedName = document.getElementById('pa-preview-area')?.textContent.includes('株式会社E2E集約検証');
 
         // 7. Re-open registration modal and sign out
-        document.getElementById('btn-register-agents').click();
+        // A valid preview appears before the final session refresh unlocks
+        // registration. Clicking a disabled button is ignored by the browser.
+        const readyRegBtn = await waitFor(() => {
+          const button = document.getElementById('btn-register-agents');
+          return button && !button.disabled ? button : null;
+        });
+        readyRegBtn.click();
         await waitFor(() => document.getElementById('agent-register-title'));
         const signOutBtn = await waitFor(() => document.querySelector('#modal-root #btn-cg-signout'));
         signOutBtn.click();
