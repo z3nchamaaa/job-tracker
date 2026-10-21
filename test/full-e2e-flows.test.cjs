@@ -378,15 +378,18 @@ test('All 8 selection statuses, early selection lane deduplication vs terminal l
   }
 });
 
-test('Linux host origin policy self-test', (t) => {
-  const { execFileSync } = require('node:child_process');
+test('Linux host origin policy self-test', async (t) => {
+  const { execFile } = require('node:child_process');
+  const run = require('node:util').promisify(execFile);
   const python = process.platform === 'win32' ? 'python' : 'python3';
   let linuxOut;
-  try { linuxOut = execFileSync(
+  // A cold Python start on a busy Windows runner can exceed five seconds.
+  // Keep the security assertion, with a bounded budget below the test's 30s.
+  try { ({ stdout: linuxOut } = await run(
     python,
     [path.join(__dirname, '..', 'platforms', 'linux', 'job-tracker-host.py'), '--test-origin-policy'],
-    { encoding: 'utf8', timeout: 5000 }
-  ); } catch (error) {
+    { encoding: 'utf8', timeout: 20000, windowsHide: true }
+  )); } catch (error) {
     if (process.platform === 'win32' && error.code === 'ENOENT') {
       t.skip('Python is not installed on this Windows host');
       return;
