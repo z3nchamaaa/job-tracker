@@ -23,7 +23,7 @@ function parseOptions(argv) {
 function run(argv = process.argv.slice(2)) {
   const options = parseOptions(argv);
   if (!options.execute) {
-    console.log(JSON.stringify({ execute: false, source: 'dist/mac-arm64', output: 'dist/signed-mac-arm64', steps: ['Validate candidate checksums and platform SBOM', 'Copy candidate; sign nested Mach-O code inside out with hardened runtime and secure timestamp', 'Sign app; submit ZIP to Apple notarytool using explicit keychain profile', 'Require Accepted; staple app; create final ZIP and DMG', 'Sign/notarize/staple DMG; regenerate SHA-256 manifest'], required: ['Developer ID Application identity', 'matching Team ID', 'preconfigured notarytool keychain profile'], note: 'No credential lookup, signing, upload or publication was performed. Actual notarized execution requires validation with your certificate.' }, null, 2));
+    console.log(JSON.stringify({ execute: false, source: 'dist/mac-arm64', output: 'dist/signed-mac-arm64', steps: ['Validate candidate checksums and platform SBOM', 'Copy candidate; retain unmodified vendor Copilot runtime and sign app-owned Mach-O code inside out', 'Sign app; submit ZIP to Apple notarytool using explicit keychain profile', 'Require Accepted; staple app; create final ZIP and DMG', 'Sign/notarize/staple DMG; regenerate SHA-256 manifest'], required: ['Developer ID Application identity', 'matching Team ID', 'preconfigured notarytool keychain profile'], note: 'No credential lookup, signing, upload or publication was performed. Actual notarized execution requires validation with your certificate.' }, null, 2));
     return;
   }
   if (process.platform !== 'darwin' || process.arch !== 'arm64') throw new Error('Run signing on macOS arm64');
@@ -50,7 +50,12 @@ function run(argv = process.argv.slice(2)) {
   } };
   visit(app);
   const sign = (file, extra = []) => command('codesign', ['--force','--sign',options.identity,'--timestamp','--options','runtime',...extra,file]);
-  for (const file of machos.sort((a, b) => b.length - a.length)) sign(file, /copilot-sdk-darwin-arm64/.test(file) && !/\.(dylib|node)$/.test(file) ? ['--entitlements',path.join(root,'platforms/macos/CopilotRuntime.entitlements.plist')] : []);
+  for (const file of machos.sort((a, b) => b.length - a.length)) {
+    // Copilot CLI is separately licensed for unmodified redistribution. Keep
+    // its vendor signature and entitlements; never rewrite them with our ID.
+    if (file.includes(`${path.sep}node_modules${path.sep}@github${path.sep}copilot-sdk-darwin-arm64${path.sep}`)) continue;
+    sign(file);
+  }
   sign(app);
   command('codesign', ['--verify','--deep','--strict',app]);
   const notarize = (file) => {
