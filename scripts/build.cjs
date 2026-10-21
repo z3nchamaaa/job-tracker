@@ -86,7 +86,7 @@ function buildMacArm64() {
   if (process.platform !== 'darwin' || process.arch !== 'arm64') {
     throw new Error('このビルド手順はmacOS Apple Silicon専用です。');
   }
-  fs.rmSync(macDist, { recursive: true, force: true });
+  fs.rmSync(macDist, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
   fs.mkdirSync(macosDir, { recursive: true });
   fs.mkdirSync(bundledAppDir, { recursive: true });
 
@@ -294,7 +294,7 @@ function buildMacArm64() {
         linux: 'WebKitGTK 4.1 (system shared package)',
       },
       nodejsRuntime: {
-        requiredVersion: '>=24.15.0 (uses built-in node:sqlite)',
+        requiredVersion: require('../src/backend/runtime.cjs').SUPPORTED_NODE_RANGE,
         detectedVersion: process.version,
         localNodeExecutablePath: nodeBinPath,
         localNodeExecutableUnpackedBytes: nodeBinBytes,
@@ -305,7 +305,7 @@ function buildMacArm64() {
         externalLinkedLibraries: linkedLibraries,
         measuredRuntimeFilesTotalBytes: nodeInstallDirBytes + linkedLibraries.bytes,
         externalNodeInstallerCompressedDownloadBytes: 'unmeasured',
-        note: 'localNodeInstallUnpackedBytes is the expanded disk usage of the local Homebrew Node installation (including headers/libnode), NOT a compressed network download size.',
+        note: 'localNodeInstallUnpackedBytes is the expanded disk usage of the Node installation used to build (including headers and libraries), NOT a compressed network download size. Node is a shared runtime and is not bundled.',
       },
       windowsDotNetHost: {
         requiredRuntime: '.NET 10 Desktop Runtime (net10.0-windows10.0.19041.0) + Microsoft.Web.WebView2 NuGet (1.0.4258.31)',
