@@ -40,6 +40,12 @@ jobs:
           node scripts/check-ai-agents.cjs
           node scripts/check-kanban-expansion.cjs
           node scripts/check-dashboard-scroll.cjs
+      - name: Native Node.js detection (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist/verification
+          swiftc -O platforms/macos/Host.swift -framework AppKit -framework WebKit -framework Security -framework CryptoKit -framework LocalAuthentication -o dist/verification/JobTrackerHost
+          node scripts/test-macos-node-resolution.cjs dist/verification/JobTrackerHost
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

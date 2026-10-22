@@ -17,6 +17,7 @@ const files = runtimeFiles('macos').map((relative) => {
 execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', app]);
 const policy = execFileSync(path.join(app, 'Contents/MacOS/JobTrackerHost'), ['--test-origin-policy'], { encoding: 'utf8' }).trim();
 if (policy !== 'ORIGIN_POLICY_SELF_TEST_OK') throw new Error('Native origin test failed');
+execFileSync(process.execPath, [path.join(root, 'scripts/test-macos-node-resolution.cjs')], { stdio: 'inherit' });
 const report = JSON.parse(fs.readFileSync(path.join(root, 'dist/size-report.json')));
 for (const asset of [report.compressedDistributionDownload.macosDmg, report.compressedDistributionDownload.macosZip]) {
   if (sha(path.join(root, asset.path)) !== asset.sha256) throw new Error('Archive digest mismatch');
