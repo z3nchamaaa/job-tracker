@@ -10,7 +10,7 @@ $OutDir = Join-Path $RepoRoot "dist\$Runtime"
 $Version = (Get-Content (Join-Path $RepoRoot "package.json") -Raw | ConvertFrom-Json).version
 $Arch = $Runtime.Split('-')[-1]
 $Project = Join-Path $PSScriptRoot "JobTracker.WebView.csproj"
-$MinimumDotNetVersion = ([xml](Get-Content $Project -Raw)).Project.PropertyGroup.RuntimeFrameworkVersion
+$MinimumDotNetVersion = ([xml](Get-Content $Project -Raw)).Project.PropertyGroup.MinimumDesktopRuntimeVersion
 if ($MinimumDotNetVersion -notmatch '^10\.0\.\d+$') { throw "Invalid minimum Desktop Runtime version" }
 $NamesScript = Join-Path $RepoRoot "src\backend\artifact-names.cjs"
 

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-    <RuntimeFrameworkVersion>10.0.13</RuntimeFrameworkVersion>
+    <MinimumDesktopRuntimeVersion>10.0.13</MinimumDesktopRuntimeVersion>
     <RollForward>LatestPatch</RollForward>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
@@ -15,6 +15,8 @@
     <ApplicationIcon>..\..\assets\icons\app-icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <FrameworkReference Update="Microsoft.NETCore.App;Microsoft.WindowsDesktop.App.WindowsForms"
+                        RuntimeFrameworkVersion="$(MinimumDesktopRuntimeVersion)" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="[1.0.4258.31]" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="[10.0.13]" />
   </ItemGroup>
