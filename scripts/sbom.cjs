@@ -21,10 +21,24 @@ function generateSbom(directory, output) {
   if (bom.bomFormat !== 'CycloneDX' || bom.specVersion !== '1.5' || !Array.isArray(bom.components)) throw new Error('Unexpected npm CycloneDX format');
   bom.metadata.authors = [{ name: 'job-tracker build tooling' }];
   bom.metadata.properties = [
-    { name: 'job-tracker:scope', value: 'Installed npm packages for this staged application; does not inventory native runtime internals, OS libraries or shared Node/.NET/WebView runtimes.' },
+    { name: 'job-tracker:scope', value: 'Installed npm packages and, when staged, the pinned bundled Node executable. Native runtime internals, OS libraries and .NET/WebView runtimes require separate review.' },
     { name: 'job-tracker:node-build-version', value: process.version },
     { name: 'job-tracker:install-scripts', value: 'disabled' },
   ];
+  if (fs.existsSync(path.join(cwd, 'runtime/node-runtime.json'))) {
+    const metadata = JSON.parse(fs.readFileSync(path.join(cwd, 'runtime/node-runtime.json')));
+    const node = require('./node-runtime.cjs').verifyBundledNode(cwd, metadata.platform, metadata.arch);
+    const reference = 'bundled-node-' + node.platform + '-' + node.arch;
+    bom.components.push({ type: 'application', name: 'Node.js', version: node.version, 'bom-ref': reference,
+      hashes: [{ alg: 'SHA-256', content: node.binarySha256 }],
+      licenses: [{ license: { name: 'Node.js and bundled third-party license notices', url: 'https://nodejs.org/dist/v' + node.version + '/LICENSE' } }],
+      externalReferences: [{ type: 'distribution', url: node.source }],
+      properties: [{ name: 'job-tracker:bundled-target', value: node.platform + '-' + node.arch },
+        { name: 'job-tracker:archive-sha256', value: node.archiveSha256 },
+        { name: 'job-tracker:license-notice', value: 'runtime/LICENSE.txt' }] });
+    const appDependency = bom.dependencies?.find((d) => d.ref === bom.metadata.component['bom-ref']);
+    if (appDependency) appDependency.dependsOn = [...(appDependency.dependsOn || []), reference];
+  }
   // npm may include repository author email from dependency metadata. That is
   // public upstream metadata, but it is unnecessary for this app's inventory.
   for (const component of [bom.metadata.component, ...bom.components]) delete component.author;

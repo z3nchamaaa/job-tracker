@@ -7,6 +7,10 @@ const { execFileSync } = require('node:child_process');
 const { runtimeFiles } = require('./stage.cjs');
 const root = path.resolve(__dirname, '..');
 const app = path.join(root, 'dist/mac-arm64/就活トラッカー.app');
+require('./node-runtime.cjs').verifyBundledNode(path.join(app, 'Contents/Resources/app'), 'darwin', 'arm64');
+const nodeLibraries = execFileSync('/usr/bin/otool', ['-L', path.join(app, 'Contents/Resources/app/runtime/node')], { encoding: 'utf8' })
+  .split('\n').slice(1).map((line) => line.trim().split(' (')[0]).filter(Boolean);
+if (nodeLibraries.some((file) => !file.startsWith('/usr/lib/') && !file.startsWith('/System/'))) throw new Error('Bundled Node depends on non-system libraries');
 const sha = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const files = runtimeFiles('macos').map((relative) => {
   const source = sha(path.join(root, relative));

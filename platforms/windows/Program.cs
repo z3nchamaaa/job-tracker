@@ -216,7 +216,13 @@ namespace JobTracker.Host
             string cliPath = Path.Combine(baseDir, "app", "src", "backend", "cli.cjs");
             string bridgePath = Path.Combine(baseDir, "app", "platforms", "windows", "bridge.js");
 
-            string nodeExecutable = Environment.GetEnvironmentVariable("JOB_TRACKER_NODE_PATH") ?? "node.exe";
+            string nodeExecutable = Path.Combine(baseDir, "app", "runtime", "node.exe");
+            if (!File.Exists(nodeExecutable))
+            {
+                MessageBox.Show("アプリの起動に必要なファイルが見つかりません。アプリを入れ直してください。", "アプリを起動できませんでした", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Close();
+                return;
+            }
             var psi = new ProcessStartInfo
             {
                 FileName = nodeExecutable,
@@ -226,6 +232,8 @@ namespace JobTracker.Host
                 CreateNoWindow = true
             };
             psi.ArgumentList.Add(cliPath);
+            psi.Environment.Remove("NODE_OPTIONS");
+            psi.Environment.Remove("NODE_PATH");
             psi.Environment["JOB_TRACKER_HOST_BINARY"] = Environment.ProcessPath ?? "";
 
             _backendProcess = Process.Start(psi);

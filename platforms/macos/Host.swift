@@ -6,16 +6,22 @@ import WebKit
 import LocalAuthentication
 
 struct NodeRuntimeUnavailable: LocalizedError {
+    var packaged = false
     var errorDescription: String? {
-        "対応するNode.jsが見つかりません。24.22.1以降の24系、または26.12.1以降の26系をインストールしてください。Homebrewとasdfの標準インストール先を確認しました。JOB_TRACKER_NODE_PATHを指定している場合は、その実行ファイルも確認してください。"
+        if packaged { return "アプリの起動に必要なファイルを確認できません。アプリを入れ直してください。" }
+        return "開発用のNode.jsが見つかりません。対応版とJOB_TRACKER_NODE_PATHを確認してください。"
     }
 }
 
 func resolveSupportedNode(appRoot: String) throws -> String {
     let environment = ProcessInfo.processInfo.environment
     let runtime = (appRoot as NSString).appendingPathComponent("src/backend/runtime.cjs")
+    let packaged = Bundle.main.resourcePath.map { appRoot == ($0 as NSString).appendingPathComponent("app") } ?? false
     var candidates: [String] = []
-    if let explicit = environment["JOB_TRACKER_NODE_PATH"], !explicit.isEmpty {
+    if packaged {
+        // Installed apps use only their own runtime, never the user's shell.
+        candidates = [(appRoot as NSString).appendingPathComponent("runtime/node")]
+    } else if let explicit = environment["JOB_TRACKER_NODE_PATH"], !explicit.isEmpty {
         // An explicit selection must fail closed rather than silently switching.
         candidates = [explicit]
     } else {
@@ -35,6 +41,10 @@ func resolveSupportedNode(appRoot: String) throws -> String {
         probe.executableURL = URL(fileURLWithPath: candidate)
         // Reuse the backend's security floors before opening any user data.
         probe.arguments = ["-e", "require(process.argv[1]).assertSupportedRuntime();process.stdout.write(process.execPath)", runtime]
+        var probeEnvironment = environment
+        probeEnvironment.removeValue(forKey: "NODE_OPTIONS")
+        probeEnvironment.removeValue(forKey: "NODE_PATH")
+        probe.environment = probeEnvironment
         let output = Pipe()
         probe.standardOutput = output
         probe.standardError = FileHandle.nullDevice
@@ -47,7 +57,7 @@ func resolveSupportedNode(appRoot: String) throws -> String {
         let resolved = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
         if resolved.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: resolved) { return resolved }
     }
-    throw NodeRuntimeUnavailable()
+    throw NodeRuntimeUnavailable(packaged: packaged)
 }
 
 func runAppAuthentication(availabilityOnly: Bool) -> Never {
@@ -483,7 +493,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
             FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))
             if smokeTestMode { exit(1) }
             let alert = NSAlert()
-            alert.messageText = "Node.jsを確認してください"
+            alert.messageText = "アプリを起動できませんでした"
             alert.informativeText = error.localizedDescription
             alert.runModal()
             NSApplication.shared.terminate(nil)
@@ -493,6 +503,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         proc.arguments = [cliPath]
 
         var env = ProcessInfo.processInfo.environment
+        env.removeValue(forKey: "NODE_OPTIONS")
+        env.removeValue(forKey: "NODE_PATH")
         env["JOB_TRACKER_HOST_BINARY"] = CommandLine.arguments[0]
         proc.environment = env
 

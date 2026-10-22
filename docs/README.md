@@ -4,7 +4,7 @@
 
 ## 利用できる環境
 
-現在は開発版で、ビルド済みの安定版アプリは配布していません。ソースからの準備が必要です。
+現在は開発版で、ビルド済みの安定版アプリは配布していません。このリポジトリにはビルド済みアプリを含めていません。
 
 | 環境 | 確認状況 |
 | --- | --- |
@@ -12,43 +12,23 @@
 | Windows x64 | ビルド・起動を確認済み |
 | Windows ARM64・Linux | 実機での起動は未確認 |
 
-Node.js **24.22.1以降の24系、または26.12.1以降の26系**を別途インストールしてください。対応していない版では起動を停止します。アプリの更新だけではNode.jsは更新されません。
+配布用アプリには実行に必要なNode.jsを同梱しています。利用者がNode.jsをインストールしたり、ターミナルでコマンドを入力したりする必要はありません。
 
-## 準備と起動
-
-最初に、リポジトリをダウンロードまたはcloneして、そのフォルダーをターミナルで開きます。
+## アプリを開く
 
 ### macOS・Apple Silicon
 
-Node.jsとXcode Command Line Toolsが必要です。
-
-```sh
-npm ci --ignore-scripts
-npm run build
-npm start
-```
-
-ビルド後は`dist/mac-arm64/就活トラッカー.app`を開いて起動できます。現在のビルドはローカル実行用で、Developer ID署名・公証は行っていません。
-
-別のNode.jsを指定して起動する場合は、実行ファイルの絶対パスを指定します。
-
-```sh
-JOB_TRACKER_NODE_PATH="/absolute/path/to/node" "/absolute/path/to/node" scripts/start.cjs
-```
-
-ソースを変更・更新した場合は、`npm ci --ignore-scripts`と`npm run build`を再実行してください。
+DMGを開き、「就活トラッカー」を「アプリケーション」フォルダーへコピーして開きます。ZIPの場合は展開したアプリをコピーしてください。現在の開発版はローカル実行用の署名で、Developer ID署名・公証は未実施です。
 
 ### Windows x64
 
-対応するNode.js、.NET 10 SDK、.NET 10 Desktop Runtime、Microsoft Edge WebView2 Runtimeが必要です。PowerShellで次を実行します。
+ZIPをフォルダーごと展開し、`JobTrackerHost.exe`を開きます。実行ファイルだけを別の場所へ移さず、展開したフォルダー全体を置いて使ってください。Node.jsは同梱していますが、現在のWindows版は.NET 10 Desktop RuntimeとMicrosoft Edge WebView2 Runtimeを使用します。
 
-```powershell
-npm ci --ignore-scripts
-.\platforms\windows\build.ps1 -Runtime win-x64
-& ".\dist\win-x64\JobTrackerHost.exe"
-```
+### Linux
 
-ARM64版やLinux版を利用する場合は、実機での動作が未確認であることに注意してください。
+DEB／RPMにはNode.jsを同梱します。システムのパッケージ管理画面からインストールし、アプリ一覧から起動します。Linuxの実機での起動は未確認です。
+
+ソースから開発・ビルドする場合のみ、対応するNode.jsやOS別の開発ツールが必要です。配布用アプリの利用手順とは別です。
 
 ## 企業を登録する
 
@@ -138,7 +118,7 @@ ChatGPT連携も登録画面にありますが、実アカウントでの利用�
 
 ## 困ったとき
 
-- **起動できない**：`node --version`で対応版か確認してください。macOSアプリはHomebrewとasdfの標準インストール先から対応版を探します。asdfは`ASDF_DATA_DIR`にも対応します。`JOB_TRACKER_NODE_PATH`を指定している場合は、その実行ファイルが対応版か確認してください。
+- **起動できない**：アプリをもう一度展開・コピーしてください。同梱ファイルが不足・破損している場合は起動を停止します。Node.jsを別途インストールする必要はありません。Windowsではフォルダー全体が展開されていることも確認してください。
 - **AI接続が利用できない**：OSの認証情報保管機能、提供元の契約・モデルID・キーの状態を確認してください。手動のコピー・貼り付けでも企業を登録できます。
 - **取り込みをやり直したい**：直前の取り込みなら、データ管理画面の巻き戻しを確認してください。
 

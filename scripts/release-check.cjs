@@ -35,13 +35,21 @@ function checkCandidate(directory, { version, platform = 'darwin', arch = 'arm64
     if (!manifest?.assets?.some((a) => a.name === name)) throw new Error('SBOM is not included in the checksum manifest');
     bom = JSON.parse(fs.readFileSync(path.join(dir, name)));
     if (bom.bomFormat !== 'CycloneDX' || bom.specVersion !== '1.5' || bom.metadata?.component?.version !== version || !Array.isArray(bom.components)) throw new Error('Invalid or stale CycloneDX SBOM');
-    return `${bom.components.length} npm components; native internals and shared runtimes need separate review`;
+    return `${bom.components.length} npm/runtime components; native internals and OS runtimes need separate review`;
   });
   check('target Copilot runtime', () => {
     const prefix = `@github/copilot-sdk-${platform}-${arch}`;
     const native = bom?.components?.find((c) => c.name === prefix || (platform === 'linux' && c.name === `@github/copilot-sdk-linuxmusl-${arch}`));
     if (!native || native.version !== '1.0.23') throw new Error('Native Copilot runtime for this OS/CPU is missing');
     return `${native.name}@${native.version}`;
+  });
+  check('bundled Node runtime', () => {
+    const spec = require('./node-runtime.cjs').getNodeSpec(platform, arch);
+    const node = bom?.components?.find((c) => c.name === 'Node.js');
+    if (node?.version !== spec.version || !node.hashes?.some((h) => h.alg === 'SHA-256' && h.content === spec.binarySha256) ||
+        !node.properties?.some((p) => p.name === 'job-tracker:bundled-target' && p.value === platform + '-' + arch) ||
+        !node.properties?.some((p) => p.name === 'job-tracker:archive-sha256' && p.value === spec.archiveSha256)) throw new Error('Pinned bundled Node is missing or differs from the target lock');
+    return 'Node.js ' + spec.version + '; separate Node installation is not required';
   });
   return checks;
 }

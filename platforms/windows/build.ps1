@@ -30,6 +30,8 @@ $AppDest = Join-Path $OutDir "app"
 New-Item -ItemType Directory -Force -Path $AppDest | Out-Null
 node (Join-Path $RepoRoot "scripts\stage.cjs") $AppDest windows ($Runtime.Split('-')[-1])
 if ($LASTEXITCODE -ne 0) { throw "Runtime staging failed" }
+node (Join-Path $RepoRoot "scripts\node-runtime.cjs") $AppDest win32 $Arch
+if ($LASTEXITCODE -ne 0) { throw "Bundled Node verification failed" }
 
 $ZipName = node $NamesScript $Version win32 $Arch zip
 if ($LASTEXITCODE -ne 0) { throw "Invalid artifact version or architecture" }

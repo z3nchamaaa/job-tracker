@@ -20,7 +20,7 @@ function runtimeFiles(platform, arch = process.arch) {
   visit('src/backend', ['.cjs']);
   visit('src/shared', ['.cjs']);
   visit('src/ui', ['.js', '.css', '.html']);
-  files.push('package.json', 'package-lock.json', 'LICENSE', 'licenses/Lucide.txt', 'licenses/Copilot-SDK-MIT.txt', 'licenses/Copilot-CLI.txt', ...['png', 'ico'].map((ext) => `assets/icons/app-icon.${ext}`));
+  files.push('package.json', 'package-lock.json', 'LICENSE', 'licenses/Lucide.txt', 'licenses/Copilot-SDK-MIT.txt', 'licenses/Copilot-CLI.txt', 'licenses/Node.js.txt', ...['png', 'ico'].map((ext) => `assets/icons/app-icon.${ext}`));
   files.push(...dependencyFiles(platform, arch));
   const hosts = { macos: ['bridge.js'], windows: ['bridge.js'], linux: ['job-tracker-host.py'] };
   if (!hosts[platform]) throw new Error('Unsupported staging platform');
