@@ -20,6 +20,7 @@ try {
     fs.mkdirSync(path.join(app, 'src/backend'), { recursive: true });
     fs.copyFileSync(path.resolve(__dirname, '../platforms/macos/Info.plist'), path.join(contents, 'Info.plist'));
     fs.copyFileSync(path.resolve(__dirname, '../src/backend/runtime.cjs'), path.join(app, 'src/backend/runtime.cjs'));
+    fs.copyFileSync(path.resolve(__dirname, '../src/backend/cli.cjs'), path.join(app, 'src/backend/cli.cjs'));
     fs.cpSync(path.resolve(__dirname, '../dist/verification/bundled-node-' + process.platform + '-' + process.arch + '/runtime'), path.join(app, 'runtime'), { recursive: true });
     const copied = path.join(contents, 'MacOS/JobTrackerHost');
     fs.copyFileSync(host, copied); fs.chmodSync(copied, 0o755); host = copied;
