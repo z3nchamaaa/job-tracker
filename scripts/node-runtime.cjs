@@ -70,7 +70,12 @@ async function stageBundledNode(directory, platform, arch) {
   if (!archiveStat.isFile() || archiveStat.isSymbolicLink() || sha(archive) !== spec.archiveSha256) throw new Error('Cached Node archive checksum mismatch');
   const extracted = fs.mkdtempSync(path.join(cache, 'unpack-'));
   try {
-    execFileSync('tar', ['-xf', archive, '-C', extracted, spec.binaryPath, spec.licensePath], { timeout: 120000 });
+    // Git Bash's GNU tar treats drive letters as remote hosts and cannot read ZIPs.
+    // Windows ships bsdtar with ZIP support; select it explicitly on the build host.
+    const tar = process.platform === 'win32'
+      ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
+      : 'tar';
+    execFileSync(tar, ['-xf', archive, '-C', extracted, spec.binaryPath, spec.licensePath], { timeout: 120000 });
     const binary = path.join(extracted, spec.binaryPath), license = path.join(extracted, spec.licensePath);
     for (const file of [binary, license]) if (!fs.lstatSync(file).isFile() || fs.lstatSync(file).isSymbolicLink()) throw new Error('Unexpected Node archive entry');
     if (sha(binary) !== spec.binarySha256 || sha(license) !== spec.licenseSha256) throw new Error('Extracted Node integrity mismatch');
