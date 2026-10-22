@@ -39,13 +39,22 @@ async function launchPage(url, { width = 1280, height = 820, scale = 1 } = {}) {
   try {
     const deadline = Date.now() + 12000;
     const portFile = path.join(profile, 'DevToolsActivePort');
-    while (!fs.existsSync(portFile)) {
+    let port;
+    while (port === undefined) {
       if (startupError) throw startupError;
       if (child.exitCode !== null || Date.now() > deadline) throw new Error('Test browser did not start');
+      if (fs.existsSync(portFile)) {
+        // Chrome can create this file before writing the port. Only consume
+        // a complete first line, rather than interpreting an empty file as 0.
+        const firstLine = /^(\d+)\r?\n/.exec(fs.readFileSync(portFile, 'utf8'));
+        if (firstLine) {
+          port = Number(firstLine[1]);
+          if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid browser port');
+          break;
+        }
+      }
       await delay(50);
     }
-    const port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]);
-    if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid browser port');
     const pages = await (await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5000) })).json();
     const page = pages.find((p) => p.type === 'page');
     if (!page || new URL(page.webSocketDebuggerUrl).hostname !== '127.0.0.1') throw new Error('Unexpected browser target');

@@ -4,7 +4,7 @@
 
 | 要素 | 使用・配布範囲 | 公式元・ライセンス |
 | --- | --- | --- |
-| Node.js（互換24.15.0以上／検証26.11.1） | 別途必要、非同梱。内蔵SQLite・暗号・HTTPを利用 | [nodejs.org](https://nodejs.org/)、MITと同梱第三者通知に従う |
+| Node.js（24.22.1以降の24系／26.12.1以降の26系） | 別途必要、非同梱。内蔵SQLite・暗号・HTTPを利用 | [nodejs.org](https://nodejs.org/)、MITと同梱第三者通知に従う |
 | @github/copilot-sdk 1.0.23 | Copilot OAuth・モデル一覧・利用枠・生成。公式npm固定版 | [公式SDK](https://github.com/github/copilot-sdk)、MIT。全文はlicenses/Copilot-SDK-MIT.txt |
 | 内包Copilot CLI 1.0.100（OS別SDK runtime 1.0.23） | アプリ機能の一部として対象OSのバイナリを未改変で同梱 | [固定版のGitHub Copilot CLI License](https://github.com/github/copilot-cli/blob/v1.0.100/LICENSE.md)。全文はlicenses/Copilot-CLI.txt。SDKのMITとは別条件で、CLIをアプリ独自のMITで再許諾しない。CLIは再署名・entitlement変更を行わず、元の通知を保持する。内蔵推移コンポーネントの完全監査を主張しない |
 | koffi 3.2.1／@koromix/koffiの対象OS版3.2.1 | SDKの直接依存。アプリは分離したstdio実行を選択 | MIT、同梱packageのLICENSE.txt。installスクリプトは無効にし、公式prebuilt optional packageを使用 |
