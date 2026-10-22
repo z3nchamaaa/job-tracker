@@ -101,8 +101,11 @@ function Assert-MicrosoftInstaller {
   param([string]$File, [string]$ExpectedHash)
   if ((Get-FileHash -LiteralPath $File -Algorithm SHA512).Hash -ine $ExpectedHash) { throw 'Installer SHA-512 mismatch' }
   $signature = Get-AuthenticodeSignature -LiteralPath $File
-  if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate -or
-      $signature.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -cne 'Microsoft Corporation') { throw 'Invalid Microsoft installer signature' }
+  if ($signature.Status -ne 'Valid' -or $null -eq $signature.SignerCertificate) { throw 'Invalid Microsoft installer signature' }
+  # Microsoft's .NET installers use CN=.NET, O=Microsoft Corporation.
+  # Validate the certified organization rather than the product's common name.
+  $subject = $signature.SignerCertificate.SubjectName.Decode([Security.Cryptography.X509Certificates.X500DistinguishedNameFlags]::UseNewLines)
+  if (($subject -split '\r?\n') -cnotcontains 'O=Microsoft Corporation') { throw 'Invalid Microsoft installer signature' }
 }
 
 function Start-DesktopRuntimeInstaller {

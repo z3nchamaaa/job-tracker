@@ -61,11 +61,13 @@ try {
   function Get-AuthenticodeSignature { return @{ Status = 'NotSigned'; SignerCertificate = $null } }
   Assert-Throws { Assert-MicrosoftInstaller 'mock.exe' ('b' * 128) } 'SHA-512'
   Assert-Throws { Assert-MicrosoftInstaller 'mock.exe' ('a' * 128) } 'signature'
-  $script:certificate = New-Object PSObject
-  $script:certificate | Add-Member ScriptMethod GetNameInfo { param($Type, $Issuer); return 'Untrusted Publisher' }
+  $script:subject = "CN=Microsoft Corporation`r`nO=Untrusted Publisher"
+  $subjectName = New-Object PSObject
+  $subjectName | Add-Member ScriptMethod Decode { param($Flags); return $script:subject }
+  $script:certificate = [pscustomobject]@{ SubjectName = $subjectName }
   function Get-AuthenticodeSignature { return @{ Status = 'Valid'; SignerCertificate = $script:certificate } }
   Assert-Throws { Assert-MicrosoftInstaller 'mock.exe' ('a' * 128) } 'signature'
-  $script:certificate | Add-Member ScriptMethod GetNameInfo { param($Type, $Issuer); return 'Microsoft Corporation' } -Force
+  $script:subject = "CN=.NET`r`nO=Microsoft Corporation"
   Assert-MicrosoftInstaller 'mock.exe' ('a' * 128)
   Restore-Functions
   $script:passed++
