@@ -35,6 +35,10 @@ jobs:
       - run: npm run sbom
       - name: Bundled Node works without a system Node
         run: node scripts/test-bundled-node.cjs
+      - name: Windows Desktop Runtime prerequisite
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./platforms/windows/test-desktop-runtime.ps1
       - name: Copilot UI and layout (macOS)
         if: runner.os == 'macOS'
         run: |

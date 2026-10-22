@@ -22,7 +22,9 @@ DMGを開き、「就活トラッカー」を「アプリケーション」フ�
 
 ### Windows x64
 
-ZIPをフォルダーごと展開し、`JobTrackerHost.exe`を開きます。実行ファイルだけを別の場所へ移さず、展開したフォルダー全体を置いて使ってください。Node.jsは同梱していますが、現在のWindows版は.NET 10 Desktop RuntimeとMicrosoft Edge WebView2 Runtimeを使用します。
+セットアップ版のEXEを開き、画面の案内に沿ってインストールします。.NET 10 Desktop Runtimeが不足している場合は、Microsoft公式から対応する最新安定版を取得してインストーラーを起動します。その際だけインターネット接続とWindowsの管理者権限の確認が必要です。導入済みなら追加の取得はありません。キャンセルや通信エラーの際は、セットアップを再実行できます。
+
+ZIP版にはこの自動導入機能がありません。.NET 10 Desktop Runtime（10.0.13以降）とMicrosoft Edge WebView2 Runtimeが必要です。ZIPをフォルダーごと展開し、`JobTrackerHost.exe`を開いてください。実行ファイルだけを別の場所へ移さず、展開したフォルダー全体を置いて使います。Node.jsはどちらにも同梱しています。
 
 ### Linux
 
