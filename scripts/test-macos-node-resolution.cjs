@@ -51,12 +51,14 @@ try {
       assert.equal(fs.realpathSync(result.stdout.trim()), fs.realpathSync(packagedNode));
     }
     if (fixture) {
-      fs.renameSync(packagedNode, packagedNode + '.missing');
-      try {
-        const result = resolve({ JOB_TRACKER_NODE_PATH: process.execPath });
-        assert.equal(result.status, 1, 'A damaged packaged app must not switch to an external Node');
-        assert.match(result.stderr, /アプリを入れ直してください/);
-      } finally { fs.renameSync(packagedNode + '.missing', packagedNode); }
+      for (const file of [packagedNode, path.resolve(path.dirname(packagedNode), '../src/backend/cli.cjs')]) {
+        fs.renameSync(file, file + '.missing');
+        try {
+          const result = resolve({ JOB_TRACKER_NODE_PATH: process.execPath });
+          assert.equal(result.status, 1, 'A damaged packaged app must not switch to an external Node or development checkout');
+          assert.match(result.stderr, /アプリを入れ直してください/);
+        } finally { fs.renameSync(file + '.missing', file); }
+      }
     }
   } else {
     for (const extra of [{}, { JOB_TRACKER_NODE_PATH: process.execPath }]) {

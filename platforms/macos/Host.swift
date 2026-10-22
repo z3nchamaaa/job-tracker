@@ -19,6 +19,9 @@ func resolveSupportedNode(appRoot: String) throws -> String {
     let packaged = Bundle.main.resourcePath.map { appRoot == ($0 as NSString).appendingPathComponent("app") } ?? false
     var candidates: [String] = []
     if packaged {
+        guard FileManager.default.fileExists(atPath: (appRoot as NSString).appendingPathComponent("src/backend/cli.cjs")) else {
+            throw NodeRuntimeUnavailable(packaged: true)
+        }
         // Installed apps use only their own runtime, never the user's shell.
         candidates = [(appRoot as NSString).appendingPathComponent("runtime/node")]
     } else if let explicit = environment["JOB_TRACKER_NODE_PATH"], !explicit.isEmpty {
@@ -466,6 +469,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     func resolveAppRoot() -> String {
         if let resourcePath = Bundle.main.resourcePath {
             let bundledApp = (resourcePath as NSString).appendingPathComponent("app")
+            // A damaged installed app must not fall back to a development
+            // checkout or a system runtime based on its working directory.
+            if Bundle.main.bundleURL.pathExtension == "app" { return bundledApp }
             if FileManager.default.fileExists(atPath: (bundledApp as NSString).appendingPathComponent("src/backend/cli.cjs")) {
                 return bundledApp
             }
