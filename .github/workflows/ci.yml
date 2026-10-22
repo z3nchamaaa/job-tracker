@@ -39,6 +39,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: powershell
         run: ./platforms/windows/test-desktop-runtime.ps1
+      - name: Windows setup compiles (x64 and ARM64)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./platforms/windows/test-installer.ps1
       - name: Copilot UI and layout (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -115,7 +119,7 @@ jobs:
         with:
           dotnet-version: 10.0.402
       - run: npm ci --ignore-scripts --cpu=${{ matrix.arch }}
-      - run: ./platforms/windows/build.ps1 -Runtime ${{ matrix.runtime }}
+      - run: ./platforms/windows/build.ps1 -Runtime ${{ matrix.runtime }} -BuildInstaller
       - run: node scripts/release-check.cjs --candidate dist/${{ matrix.runtime }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -123,6 +127,7 @@ jobs:
           retention-days: 7
           path: |
             dist/${{ matrix.runtime }}/*-portable.zip
+            dist/${{ matrix.runtime }}/job-tracker-*-win-*.exe
             dist/${{ matrix.runtime }}/*.cdx.json
             dist/${{ matrix.runtime }}/SHA256SUMS
             dist/${{ matrix.runtime }}/release-manifest.json
