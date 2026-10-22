@@ -22,6 +22,7 @@ if (process.platform === 'darwin' && !process.argv.includes('--server-only') && 
   const child = spawn(macHostBin, process.argv.slice(2), {
     cwd: repoRoot,
     stdio: 'inherit',
+    env: { ...process.env, JOB_TRACKER_NODE_PATH: process.env.JOB_TRACKER_NODE_PATH || process.execPath },
   });
   child.on('error', (error) => { console.error(error.message); process.exitCode = 1; });
   child.on('exit', (code) => process.exit(code ?? 0));

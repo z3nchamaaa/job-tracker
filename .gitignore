@@ -1,5 +1,6 @@
-# Local specifications and work records
-/docs/
+# User guide is public; other specifications and work records stay local
+/docs/*
+!/docs/README.md
 
 # Dependencies, generated packages, test output and OS files
 node_modules/
