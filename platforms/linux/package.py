@@ -67,7 +67,7 @@ def main():
             f"Package: job-tracker\nVersion: {VERSION}\nArchitecture: amd64\n"
             "Maintainer: Job Tracker Contributors <noreply@example.invalid>\n"
             "Section: utils\nPriority: optional\n"
-            "Depends: nodejs (>= 24.22.1), nodejs (<< 25) | nodejs (>= 26.12.1), nodejs (<< 27), python3, python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, libsecret-tools\n"
+            "Depends: nodejs (>= 24.15.0), python3, python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1, libsecret-tools\n"
             "Description: Local job application tracker with system WebView\n"
         )
         target = OUT / artifact_name('deb')
@@ -100,7 +100,7 @@ Release: 1
 Summary: Local job application tracker
 License: MIT
 AutoReqProv: no
-Requires: ((nodejs >= 24.22.1 with nodejs < 25) or (nodejs >= 26.12.1 with nodejs < 27)), python3, python3-gobject, gtk3, webkit2gtk4.1, libsecret
+Requires: nodejs >= 24.15.0, python3, python3-gobject, gtk3, webkit2gtk4.1, libsecret
 %description
 Local job application tracker using the operating system WebView.
 %prep

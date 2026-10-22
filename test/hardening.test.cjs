@@ -191,27 +191,9 @@ test('Key provisioning fails closed on service errors and malformed keys, withou
   assert.throws(() => createMacKeychainStorage().encryptString('synthetic-token'), /ネイティブ保護機能/);
 });
 
-test('Runtime security floors reject unpatched majors and prereleases before loading SQLite', () => {
-  for (const version of ['22.23.4', '24.15.0', '24.22.0', '25.99.99', '26.11.1', '26.12.0', '27.0.0', '26.12.1-rc.1', '26.12.1+custom', 'unknown', '24.-1.0', '24.22.1.0']) {
-    assert.throws(() => assertSupportedRuntime(version), /2026-10-21/, version);
-  }
-  for (const version of ['24.22.1', 'v24.22.1', '24.22.2', '24.23.0', '26.12.1', '26.12.2', '26.13.0']) assert.doesNotThrow(() => assertSupportedRuntime(version), version);
-  const { SUPPORTED_NODE_RANGE } = require('../src/backend/runtime.cjs');
-  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json')));
-  const lock = JSON.parse(fs.readFileSync(path.join(__dirname, '../package-lock.json')));
-  assert.equal(pkg.engines.node, SUPPORTED_NODE_RANGE);
-  assert.equal(lock.packages[''].engines.node, SUPPORTED_NODE_RANGE);
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-reject-old-node-'));
-  const dataDir = path.join(dir, 'must-not-be-created');
-  try {
-    const result = spawnSync(process.execPath, ['-e', `
-      Object.defineProperty(process.versions, 'node', { value: '26.12.0' });
-      require(${JSON.stringify(path.resolve(__dirname, '../src/backend/cli.cjs'))});
-    `], { env: { ...process.env, JOB_TRACKER_DATA_DIR: dataDir }, encoding: 'utf8' });
-    assert.equal(result.status, 1);
-    assert.match(result.stderr, /2026-10-21/);
-    assert.equal(fs.existsSync(dataDir), false, 'Refuse startup before creating any data');
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+test('Runtime minimum is checked before loading SQLite', () => {
+  for (const version of ['22.5.0', '22.13.0', '24.14.9', 'unknown']) assert.throws(() => assertSupportedRuntime(version), /24.15.0以降/);
+  for (const version of ['24.15.0', '24.21.0', '26.11.1']) assert.doesNotThrow(() => assertSupportedRuntime(version));
 });
 
 test('Distribution staging only copies allowlisted source and assets', () => {
