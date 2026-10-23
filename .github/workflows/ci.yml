@@ -32,6 +32,7 @@ jobs:
       - run: npm audit --omit=dev --audit-level=low
       - run: node --test --test-timeout=30000 test/*.test.cjs
       - run: npm run security:audit
+      - run: node scripts/macos-icon.cjs
       - run: npm run sbom
       - name: Bundled Node works without a system Node
         run: node scripts/test-bundled-node.cjs

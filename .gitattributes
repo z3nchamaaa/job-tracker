@@ -1,8 +1,11 @@
 * text=auto
+*.car binary
 *.sh text eol=lf
 *.png binary
 *.ico binary
 *.icns binary
+assets/icons/macos/*.json text eol=lf
+scripts/macos-icon.cjs text eol=lf
 
 # Preserve the upstream Node license byte-for-byte, including its formatting.
 licenses/Node.js.txt -text -whitespace

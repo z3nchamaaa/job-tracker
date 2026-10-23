@@ -10,6 +10,8 @@
   <string>JobTrackerHost</string>
   <key>CFBundleIconFile</key>
   <string>app-icon.icns</string>
+  <key>CFBundleIconName</key>
+  <string>AppIcon</string>
   <key>CFBundleIdentifier</key>
   <string>jp.jobtracker.app</string>
   <key>CFBundleInfoDictionaryVersion</key>

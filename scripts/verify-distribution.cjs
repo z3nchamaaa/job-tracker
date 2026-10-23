@@ -12,6 +12,11 @@ const nodeLibraries = execFileSync('/usr/bin/otool', ['-L', path.join(app, 'Cont
   .split('\n').slice(1).map((line) => line.trim().split(' (')[0]).filter(Boolean);
 if (nodeLibraries.some((file) => !file.startsWith('/usr/lib/') && !file.startsWith('/System/'))) throw new Error('Bundled Node depends on non-system libraries');
 const sha = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+const icon = require('./macos-icon.cjs').verify();
+if (sha(path.join(app, 'Contents/Resources/Assets.car')) !== icon.assetsSha256 ||
+    execFileSync('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleIconName', path.join(app, 'Contents/Info.plist')], { encoding: 'utf8' }).trim() !== icon.iconName) {
+  throw new Error('Native macOS icon is missing or stale');
+}
 const files = runtimeFiles('macos').map((relative) => {
   const source = crypto.createHash('sha256').update(stagedContent(relative)).digest('hex');
   const bundled = sha(path.join(app, 'Contents/Resources/app', relative));
