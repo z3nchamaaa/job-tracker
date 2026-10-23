@@ -204,7 +204,7 @@ function createAppServer(options = {}) {
 
   const aiAgents = new AiAgents({ dataDir: authDir, safeStorage, fetch: options.agentFetch || options.fetch || globalThis.fetch });
   const copilotService = options.copilotService || new CopilotService({ dataDir: authDir, safeStorage, fetch: options.copilotFetch || globalThis.fetch });
-  const googleDriveService = options.googleDriveService || new GoogleDriveService({ dataDir: authDir, safeStorage, openExternal, dbStore, profileStore, fetch: options.driveFetch || globalThis.fetch });
+  const googleDriveService = options.googleDriveService || new GoogleDriveService({ dataDir: authDir, safeStorage, openExternal, dbStore, profileStore, fetch: options.driveFetch || globalThis.fetch, ...(options.driveDefaultClient !== undefined ? { defaultClient: options.driveDefaultClient } : {}) });
   const ipcDispatcher = createIpcDispatcher({
     googleDriveService,
     aiAgents,

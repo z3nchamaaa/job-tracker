@@ -9,7 +9,8 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
   const safeStorage = { isEncryptionAvailable: () => true,
     encryptString(value) { const iv=crypto.randomBytes(12), c=crypto.createCipheriv('aes-256-gcm',key,iv);return Buffer.concat([iv,c.update(value),c.final(),c.getAuthTag()]); },
     decryptString(value) { const c=crypto.createDecipheriv('aes-256-gcm',key,value.subarray(0,12));c.setAuthTag(value.subarray(-16));return Buffer.concat([c.update(value.subarray(12,-16)),c.final()]).toString(); } };
-  const app = createAppServer({ dataDir: directory, allowDevBrowserSession: true, safeStorage,
+  const defaultClient = process.argv.includes('--without-default') ? null : { clientId: '987654321-bundled.apps.googleusercontent.com', clientSecret: 'synthetic-bundled-secret' };
+  const app = createAppServer({ dataDir: directory, allowDevBrowserSession: true, safeStorage, driveDefaultClient: defaultClient,
     openExternal: async (raw) => {
       const url=new URL(raw);assert.equal(url.origin,'https://accounts.google.com');authCalls++;
       const redirect=new URL(url.searchParams.get('redirect_uri'));redirect.searchParams.set('state',url.searchParams.get('state'));redirect.searchParams.set('code','4/synthetic-ui-code');
@@ -35,8 +36,18 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     const wait=async(s)=>{for(let i=0;i<200;i++){if(await evaluate(s))return;await new Promise(r=>setTimeout(r,30));}throw new Error('Timed out: '+s);};
     await wait("Boolean(document.querySelector('[data-empty-add=prompt]'))");await click('btn-data-manage');await wait("Boolean(document.getElementById('drive-config-form'))");
     assert.equal(network,0);assert.equal(authCalls,0);
+    await wait("Boolean(document.getElementById('drive-connect'))");
+    assert.equal(await evaluate("document.querySelector('.drive-config').open"), false);
+    assert.equal(await evaluate("document.getElementById('drive-connect').disabled"), !defaultClient);
+    if (defaultClient) {
+      await click('drive-connect'); await wait("!document.getElementById('drive-upload').disabled");
+      await evaluate('window.confirm=()=>true'); await click('drive-forget');
+      await wait("document.getElementById('drive-message').textContent.includes('解除しました')");
+      assert.equal(await evaluate("document.getElementById('drive-connect').disabled"), false);
+    }
+    const beforeCustomSetup = network;
     await evaluate("window.driveErrors=[];window.addEventListener('unhandledrejection',e=>window.driveErrors.push(String(e.reason)));window.confirm=()=>true;document.querySelector('.drive-config').open=true;document.getElementById('drive-client-id').value='123456789-synthetic.apps.googleusercontent.com';document.getElementById('drive-client-secret').value='synthetic-ui-secret';document.getElementById('drive-config-form').requestSubmit()");
-    await wait("!document.getElementById('drive-connect').disabled");assert.equal(network,0);
+    await wait("document.getElementById('drive-message').textContent.includes('設定を保存しました')");assert.equal(network,beforeCustomSetup);
     assert.equal(await evaluate("document.getElementById('drive-client-secret').value"),'');
     await click('drive-connect');await wait("!document.getElementById('drive-upload').disabled");
     await evaluate('window.confirm=()=>false');await click('drive-upload');await wait("!document.getElementById('drive-upload').disabled");assert.equal(uploaded,null);
@@ -53,6 +64,12 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     const out=path.resolve(__dirname,'../dist/screenshots');fs.mkdirSync(out,{recursive:true});
     fs.writeFileSync(path.join(out,'google-drive-backup.png'),Buffer.from((await browser.call('Page.captureScreenshot',{format:'png'})).data,'base64'));
     await click('drive-disconnect');await wait("document.getElementById('drive-upload').disabled");
+    if (defaultClient) {
+      assert.equal(await evaluate("document.getElementById('drive-use-bundled').hidden"), false);
+      await click('drive-use-bundled'); await wait("document.getElementById('drive-message').textContent.includes('共通の接続設定に戻しました')");
+      assert.equal(await evaluate("document.getElementById('drive-use-bundled').hidden"), true);
+      assert.equal(await evaluate("document.getElementById('drive-connect').disabled"), false);
+    }
     assert.deepEqual(await evaluate('window.driveErrors'),[]);
     console.log('PASS: no automatic Drive network; local-only client setup; mock OAuth/PKCE; cancelled upload sends nothing; explicit upload/list/preview/restore/rollback/disconnect; three narrow sizes. No real Google account or cloud writes.');
   } finally { await browser?.close();await app.stop();fs.rmSync(directory,{recursive:true,force:true}); }

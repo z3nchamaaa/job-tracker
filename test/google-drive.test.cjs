@@ -97,3 +97,52 @@ test('failed revocation preserves connection and local-only disconnect sends no 
   await assert.rejects(service.disconnect({}),/解除/);assert.equal(service.getStatus().connected,true);
   await service.disconnect({localOnly:true});assert.equal(calls,1);assert.equal(service.getStatus().connected,false);
 });
+
+test('bundled Desktop client allows first login without writing configuration and preserves custom accounts', async (t) => {
+  const defaultClient = { clientId: '987654321-bundled.apps.googleusercontent.com', clientSecret: 'synthetic-bundled-secret' };
+  let auth;
+  const { service, authorize } = fixture(t, { defaultClient, openExternal: async (url) => { auth = new URL(url); }, fetch: async () => successToken() });
+  assert.equal(service.getStatus().configured, true);
+  assert.equal(service.getStatus().configurationSource, 'bundled');
+  assert.equal(fs.existsSync(service.file), false);
+  assert(!JSON.stringify(service.getStatus()).includes(defaultClient.clientSecret));
+  await service.beginLogin();
+  assert.equal(auth.searchParams.get('client_id'), defaultClient.clientId);
+  await callback(auth, { state: auth.searchParams.get('state'), code: '4/synthetic' });
+  if (service.login) await service.login.promise;
+  assert.equal(service.getStatus().connected, true);
+  await service.disconnect({ localOnly: true });
+  assert.equal(service.getStatus().configured, true);
+  authorize();
+  assert.equal(service.getStatus().configurationSource, 'custom');
+  assert.equal(service.getStatus().connected, true);
+  assert.throws(() => service.configure({ useBundled: true, clientId: CLIENT }));
+  service.configure({ useBundled: true });
+  assert.equal(service.getStatus().connected, false);
+  assert.equal(service.getStatus().configurationSource, 'bundled');
+  assert.equal(service.read().refreshToken, '');
+});
+
+test('reset to unavailable bundled client is rejected without changing an existing login', (t) => {
+  const { service, authorize } = fixture(t, { defaultClient: null }); authorize();
+  const before = fs.readFileSync(service.file);
+  assert.throws(() => service.configure({ useBundled: true }));
+  assert.deepEqual(fs.readFileSync(service.file), before);
+});
+
+test('staging extracts only Desktop application fields and never copies user tokens or URLs', (t) => {
+  const { execFileSync } = require('node:child_process');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-google-stage-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const file = path.join(dir, 'client.json');
+  const stage = path.resolve(__dirname, '../scripts/stage.cjs');
+  const content = (source) => execFileSync(process.execPath, ['-e', 'process.stdout.write(require(process.argv[1]).stagedContent("src/backend/google-oauth-client.json"))', stage], { env: { ...process.env, JOB_TRACKER_GOOGLE_OAUTH_CLIENT_FILE: source }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  assert.deepEqual(JSON.parse(content('')), {});
+  fs.writeFileSync(file, JSON.stringify({ installed: { client_id: CLIENT, client_secret: 'synthetic-only', token_uri: 'https://untrusted.invalid' }, refresh_token: REFRESH }));
+  assert.deepEqual(JSON.parse(content(file)), { clientId: CLIENT, clientSecret: 'synthetic-only' });
+  fs.writeFileSync(file, JSON.stringify({ web: { client_id: CLIENT } }));
+  assert.throws(() => content(file));
+  fs.writeFileSync(file, '{"sensitive-malformed-input":');
+  try { content(file); assert.fail('should reject'); } catch (e) { assert(!String(e.stderr).includes('sensitive-malformed-input')); }
+  assert.throws(() => content(dir));
+});

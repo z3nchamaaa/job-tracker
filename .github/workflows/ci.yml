@@ -50,6 +50,7 @@ jobs:
         run: |
           node scripts/check-copilot.cjs
           node scripts/check-google-drive.cjs
+          node scripts/check-google-drive.cjs --without-default
           node scripts/check-ai-agents.cjs
           node scripts/check-kanban-expansion.cjs
           node scripts/check-dashboard-scroll.cjs

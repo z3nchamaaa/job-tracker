@@ -35,6 +35,18 @@ function runtimeFiles(platform, arch = process.arch) {
 }
 
 function stagedContent(relative) {
+  if (relative === 'src/backend/google-oauth-client.json') {
+    const source = process.env.JOB_TRACKER_GOOGLE_OAUTH_CLIENT_FILE;
+    if (!source) return Buffer.from('{}\n');
+    // Explicit build input only: never auto-discover credentials or read .env.
+    // Copy only the Desktop client fields, not tokens, URLs or other JSON data.
+    try {
+      const stat = fs.lstatSync(source);
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 65536) throw new Error();
+      const client = require('../src/backend/google-oauth-config.cjs').desktopClient(JSON.parse(fs.readFileSync(source, 'utf8')));
+      return Buffer.from(JSON.stringify(client) + '\n');
+    } catch { throw new Error('配布用Google設定を読み取れません。JOB_TRACKER_GOOGLE_OAUTH_CLIENT_FILEにデスクトップ用クライアントJSONを指定してください。'); }
+  }
   const raw = fs.readFileSync(path.join(root, relative));
   if (relative === 'package.json') {
     const pkg = JSON.parse(raw); pkg.dependencies = {};

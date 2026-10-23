@@ -6,14 +6,15 @@
     panel.innerHTML = `
       <h3 class="panel-title">Google Driveバックアップ</h3>
       <p class="settings-note">このアプリ専用の保存領域へ、必要なときだけバックアップします。通常のDrive画面には表示されません。自動同期や他のDriveファイルへのアクセスは行いません。</p>
-      <details class="drive-config"><summary>Googleの接続設定</summary>
-        <p class="settings-note">開発版では、Google Cloudで作成した「デスクトップ アプリ」用OAuthクライアントを設定します。JSONはGoogleへ送信せず、この端末で設定値を読み取ります。接続情報はOSの保護機能で暗号化します。</p>
+      <details class="drive-config"><summary>詳細設定（独自のGoogle接続設定）</summary>
+        <p class="settings-note">通常は設定せず「Googleに接続」から利用できます。独自のGoogle Cloudプロジェクトを使う場合だけ、「デスクトップ アプリ」用クライアントを登録してください。接続先を変更すると再ログインが必要になり、以前のアプリ専用領域のバックアップは新しい接続先から表示できない場合があります。</p>
         <form id="drive-config-form" class="drive-form">
           <label class="form-field"><span class="form-label">クライアントJSONを読み込む</span><input id="drive-client-file" type="file" accept=".json,application/json" class="input"></label>
           <label class="form-field"><span class="form-label">Client ID</span><input id="drive-client-id" class="input" autocomplete="off" maxlength="256" required></label>
           <label class="form-field"><span class="form-label">Client Secret（JSONに含まれる場合）</span><input id="drive-client-secret" class="input" type="password" autocomplete="new-password" maxlength="256" placeholder="保存済みの場合、空欄なら保持"></label>
           <button type="submit" class="btn btn-sm btn-outlined">接続設定を保存</button>
         </form>
+        <button type="button" id="drive-use-bundled" class="btn btn-sm btn-outlined" hidden>アプリ共通の接続設定に戻す</button>
       </details>
       <p id="drive-status" class="settings-note"></p>
       <div id="drive-controls" class="drive-actions"></div>
@@ -25,10 +26,13 @@
     const counts = (p) => `企業 ${Number(p.companies) || 0}社 ／ 選考 ${Number(p.steps) || 0}件 ／ 面接記録 ${Number(p.interviews) || 0}件 ／ 予定 ${Number(p.events) || 0}件`;
     const render = () => {
       if (!alive()) return;
-      panel.querySelector('#drive-status').textContent = status.signingIn ? 'ブラウザーでGoogleの接続を承認してください。' : status.connected ? 'Google Driveに接続済み' : status.configured ? '接続設定済み・未接続' : '接続設定が未登録です。上の「Googleの接続設定」から登録してください。';
+      panel.querySelector('#drive-status').textContent = status.signingIn ? 'ブラウザーでGoogleの接続を承認してください。' : status.connected ? 'Google Driveに接続済み' : status.configured ? (status.configurationSource === 'bundled' ? '「Googleに接続」から、自分のGoogleアカウントでログインしてください。' : '独自の接続設定を使用しています。「Googleに接続」からログインしてください。') : 'このビルドには共通のGoogle接続設定が含まれていません。詳細設定から独自の接続設定を登録できます。';
+      const useBundled = panel.querySelector('#drive-use-bundled');
+      useBundled.hidden = !status.bundledAvailable || status.configurationSource === 'bundled';
+      useBundled.disabled = busy || status.signingIn || status.busy;
       panel.querySelectorAll('#drive-config-form input, #drive-config-form button').forEach((el) => { el.disabled = busy || status.signingIn; });
       controls.innerHTML = status.signingIn ? '<button type="button" class="btn btn-sm btn-outlined" id="drive-cancel-login">接続を中断</button>' : `
-        <button type="button" class="btn btn-sm btn-outlined" id="drive-connect" ${busy || !status.configured || !status.encryptedStorageAvailable ? 'disabled' : ''}>${status.connected ? 'Googleへ再接続' : 'Googleへ接続'}</button>
+        <button type="button" class="btn btn-sm btn-outlined" id="drive-connect" ${busy || !status.configured || !status.encryptedStorageAvailable ? 'disabled' : ''}>${status.connected ? 'Googleに再接続' : 'Googleに接続'}</button>
         <button type="button" class="btn btn-sm btn-primary" id="drive-upload" ${busy || !status.connected ? 'disabled' : ''}>内容を確認してDriveへ保存</button>
         <button type="button" class="btn btn-sm btn-outlined" id="drive-list" ${busy || !status.connected ? 'disabled' : ''}>バックアップ一覧を取得</button>
         ${status.connected ? `<button type="button" class="btn btn-sm btn-outlined" id="drive-disconnect" ${busy ? 'disabled' : ''}>Googleの許可を解除</button><button type="button" class="btn btn-sm btn-outlined" id="drive-forget" ${busy ? 'disabled' : ''}>この端末の接続情報だけ削除</button>` : ''}
@@ -103,11 +107,24 @@
       finally { event.target.value = ''; }
     });
     panel.querySelector('#drive-config-form').addEventListener('submit', (event) => {
-      event.preventDefault(); run(async () => {
+      event.preventDefault();
+      if (status.connected && !window.confirm('Googleの接続設定を変更しますか？ 接続先が変わる場合は再ログインが必要です。以前の接続先のバックアップはそのまま残ります。')) return;
+      run(async () => {
         const secret = panel.querySelector('#drive-client-secret');
         try { await invoke('configureGoogleDrive', { clientId: panel.querySelector('#drive-client-id').value.trim(), ...(secret.value ? { clientSecret: secret.value } : {}) }); }
         finally { secret.value = ''; }
-        return '接続設定を保存しました。「Googleへ接続」から承認してください。';
+        files = []; restoreToken = ''; renderFiles(); panel.querySelector('#drive-preview').replaceChildren();
+        return '接続設定を保存しました。「Googleに接続」から承認してください。';
+      });
+    });
+    panel.querySelector('#drive-use-bundled').addEventListener('click', () => {
+      if (!window.confirm('アプリ共通のGoogle接続設定に戻しますか？ 接続先が変わる場合は再ログインが必要です。以前の接続先のバックアップはそのまま残ります。')) return;
+      run(async () => {
+        status = await invoke('configureGoogleDrive', { useBundled: true });
+        panel.querySelector('#drive-client-id').value = status.clientId || '';
+        panel.querySelector('#drive-client-secret').value = '';
+        files = []; restoreToken = ''; renderFiles(); panel.querySelector('#drive-preview').replaceChildren();
+        return 'アプリ共通の接続設定に戻しました。「Googleに接続」からログインできます。';
       });
     });
     root.addEventListener('jt-modal-close', () => { clearTimeout(timer); panel.querySelector('#drive-client-secret').value = ''; invoke('cancelGoogleDriveLogin').catch(() => {}); invoke('cancelGoogleDriveTransfer').catch(() => {}); }, { once: true });

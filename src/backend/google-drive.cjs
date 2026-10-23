@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const crypto = require('node:crypto');
+const { bundledClient, normalizeClient } = require('./google-oauth-config.cjs');
 const SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
 const API = 'https://www.googleapis.com/drive/v3/files';
 const MAX_BACKUP = 5 * 1024 * 1024;
@@ -25,10 +26,11 @@ async function bounded(response, max) {
   return Buffer.concat(chunks).toString('utf8');
 }
 class GoogleDriveService {
-  constructor({ dataDir, safeStorage, openExternal, dbStore, profileStore, fetch: request = globalThis.fetch, now = Date.now, loginTimeout = 180000 }) {
+  constructor({ dataDir, safeStorage, openExternal, dbStore, profileStore, fetch: request = globalThis.fetch, now = Date.now, loginTimeout = 180000, defaultClient = bundledClient() }) {
     this.file = path.join(dataDir, 'google-drive.enc'); this.storage = safeStorage; this.openExternal = openExternal;
     this.db = dbStore; this.profile = profileStore; this.fetch = request; this.now = now; this.loginTimeout = loginTimeout;
     this.login = null; this.operation = null; this.staged = null; this.loginError = ''; this.epoch = 0;
+    this.defaultClient = defaultClient ? normalizeClient(defaultClient) : null;
   }
   read() {
     try {
@@ -56,14 +58,19 @@ class GoogleDriveService {
     } finally { if (fd !== undefined) fs.closeSync(fd); fs.rmSync(temporary, { force: true }); }
   }
   getStatus() {
-    const saved = this.read();
+    const saved = this.read() || this.defaultClient;
     return { configured: Boolean(saved), clientId: saved?.clientId || '', hasClientSecret: Boolean(saved?.clientSecret),
+      bundledAvailable: Boolean(this.defaultClient), configurationSource: !saved ? 'none' : this.defaultClient && saved.clientId === this.defaultClient.clientId && saved.clientSecret === this.defaultClient.clientSecret ? 'bundled' : 'custom',
       connected: Boolean(saved?.refreshToken), signingIn: Boolean(this.login), busy: Boolean(this.operation), error: this.loginError,
       encryptedStorageAvailable: this.storage.isEncryptionAvailable() };
   }
   configure(value) {
-    input(value, ['clientId', 'clientSecret']);
+    input(value, ['clientId', 'clientSecret', 'useBundled']);
     if (this.login || this.operation) throw error('認証・転送を中断してから接続設定を変更してください。');
+    if (value.useBundled !== undefined) {
+      if (value.useBundled !== true || Object.keys(value).length !== 1 || !this.defaultClient) throw error('このアプリには共通のGoogle接続設定が含まれていません。');
+      value = this.defaultClient;
+    }
     if (typeof value.clientId !== 'string' || !/^[0-9]+-[A-Za-z0-9_-]+\.apps\.googleusercontent\.com$/.test(value.clientId) ||
         (value.clientSecret !== undefined && (typeof value.clientSecret !== 'string' || !/^[\x21-\x7e]{0,256}$/.test(value.clientSecret)))) throw error('デスクトップ用OAuthクライアントの設定を確認してください。');
     const old = this.read(), same = old?.clientId === value.clientId;
@@ -84,8 +91,8 @@ class GoogleDriveService {
   }
   async beginLogin() {
     if (this.login || this.operation) throw error('別のGoogle Drive処理が進行中です。');
-    const saved = this.read();
-    if (!saved || !this.storage.isEncryptionAvailable()) throw error('先にネイティブアプリでGoogleの接続設定を保存してください。');
+    const saved = this.read() || (this.defaultClient ? { version: 1, ...this.defaultClient, accessToken: '', refreshToken: '', expiresAt: 0 } : null);
+    if (!saved || !this.storage.isEncryptionAvailable()) throw error('ネイティブアプリのGoogle接続設定を確認してください。');
     const pending = { state: crypto.randomBytes(32).toString('base64url'), verifier: crypto.randomBytes(48).toString('base64url'), controller: new AbortController(), epoch: this.epoch, accepted: false };
     pending.server = http.createServer((req, res) => {
       const reply = (status, message) => { res.writeHead(status, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'Content-Security-Policy': "default-src 'none'", 'X-Content-Type-Options': 'nosniff' }); res.end(message); };
