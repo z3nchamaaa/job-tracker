@@ -1360,3 +1360,15 @@ html.is-zoom-200 .code-box {
 }
 
 [hidden] { display: none !important; }
+
+/* Google Drive backup controls */
+.drive-config { margin: 12px 0; }
+.drive-config summary { cursor: pointer; }
+.drive-form { display: grid; gap: 10px; margin-top: 12px; min-width: 0; }
+.drive-form .input { width: 100%; min-width: 0; }
+.drive-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.drive-backup-list { list-style: none; padding: 0; }
+.drive-backup-list li { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--m3-outline-variant); }
+.drive-backup-list li > span { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.drive-backup-list small { display: block; }
+.drive-restore { flex-direction: column; align-items: stretch; gap: 8px; }

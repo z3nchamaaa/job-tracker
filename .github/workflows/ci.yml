@@ -49,6 +49,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           node scripts/check-copilot.cjs
+          node scripts/check-google-drive.cjs
           node scripts/check-ai-agents.cjs
           node scripts/check-kanban-expansion.cjs
           node scripts/check-dashboard-scroll.cjs
@@ -69,6 +70,7 @@ jobs:
             dist/sbom/*.json
             dist/verification/*.json
             dist/screenshots/copilot-*.png
+            dist/screenshots/google-drive-*.png
   mac-candidate:
     name: macOS candidate
     needs: core

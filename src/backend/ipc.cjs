@@ -65,7 +65,7 @@ function validateExternalHttpsUrl(rawUrl) {
   return validated;
 }
 
-function createIpcDispatcher({ chatgptService, profileStore, updater, openExternal, appSettingsService, aiAgents, copilotService }) {
+function createIpcDispatcher({ chatgptService, profileStore, updater, openExternal, appSettingsService, aiAgents, copilotService, googleDriveService }) {
   const assertNoArg = (arg, methodName) => {
     if (arg !== undefined && arg !== null) {
       throw new Error(`${methodName} に不要な引数は指定できません。`);
@@ -73,6 +73,17 @@ function createIpcDispatcher({ chatgptService, profileStore, updater, openExtern
   };
 
   const handlers = Object.freeze({
+    getGoogleDriveStatus: async (arg) => { assertNoArg(arg, 'getGoogleDriveStatus'); return googleDriveService.getStatus(); },
+    beginGoogleDriveLogin: async (arg) => { assertNoArg(arg, 'beginGoogleDriveLogin'); return googleDriveService.beginLogin(); },
+    cancelGoogleDriveLogin: async (arg) => { assertNoArg(arg, 'cancelGoogleDriveLogin'); return googleDriveService.cancelLogin(); },
+    cancelGoogleDriveTransfer: async (arg) => { assertNoArg(arg, 'cancelGoogleDriveTransfer'); return googleDriveService.cancelOperation(); },
+    prepareGoogleDriveBackup: async (arg) => { assertNoArg(arg, 'prepareGoogleDriveBackup'); return googleDriveService.prepareBackup(); },
+    configureGoogleDrive: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Google Driveの入力が不正です。'); return googleDriveService.configure(arg); },
+    disconnectGoogleDrive: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Google Driveの入力が不正です。'); return googleDriveService.disconnect(arg); },
+    uploadGoogleDriveBackup: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Google Driveの入力が不正です。'); return googleDriveService.uploadBackup(arg); },
+    listGoogleDriveBackups: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Google Driveの入力が不正です。'); return googleDriveService.listBackups(arg); },
+    previewGoogleDriveBackup: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Google Driveの入力が不正です。'); return googleDriveService.previewBackup(arg); },
+    restoreGoogleDriveBackup: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Google Driveの入力が不正です。'); return googleDriveService.restoreBackup(arg); },
     getCopilotStatus: async (arg) => { assertNoArg(arg, 'getCopilotStatus'); return copilotService.getStatus(); },
     installCopilotPack: async (arg) => { assertNoArg(arg, 'installCopilotPack'); return copilotService.installPack(); },
     cancelCopilotPack: async (arg) => { assertNoArg(arg, 'cancelCopilotPack'); return copilotService.cancelPack(); },
