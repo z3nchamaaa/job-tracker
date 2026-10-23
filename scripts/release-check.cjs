@@ -37,11 +37,10 @@ function checkCandidate(directory, { version, platform = 'darwin', arch = 'arm64
     if (bom.bomFormat !== 'CycloneDX' || bom.specVersion !== '1.5' || bom.metadata?.component?.version !== version || !Array.isArray(bom.components)) throw new Error('Invalid or stale CycloneDX SBOM');
     return `${bom.components.length} npm/runtime components; native internals and OS runtimes need separate review`;
   });
-  check('target Copilot runtime', () => {
-    const prefix = `@github/copilot-sdk-${platform}-${arch}`;
-    const native = bom?.components?.find((c) => c.name === prefix || (platform === 'linux' && c.name === `@github/copilot-sdk-linuxmusl-${arch}`));
-    if (!native || native.version !== '1.0.23') throw new Error('Native Copilot runtime for this OS/CPU is missing');
-    return `${native.name}@${native.version}`;
+  check('optional Copilot pack', () => {
+    if (!bom?.metadata?.properties?.some((p) => p.name === 'job-tracker:copilot-mode' && p.value === 'optional')) throw new Error('Copilot optional-pack policy is missing');
+    if (bom.components.some((c) => c.name.startsWith('@github/copilot-sdk') || ['koffi', 'zod', 'vscode-jsonrpc'].includes(c.name))) throw new Error('Copilot dependencies must not be in the base application');
+    return 'Copilot is an explicit optional download; Node remains bundled';
   });
   check('bundled Node runtime', () => {
     const spec = require('./node-runtime.cjs').getNodeSpec(platform, arch);

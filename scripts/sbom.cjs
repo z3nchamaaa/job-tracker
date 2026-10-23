@@ -24,6 +24,7 @@ function generateSbom(directory, output) {
     { name: 'job-tracker:scope', value: 'Installed npm packages and, when staged, the pinned bundled Node executable. Native runtime internals, OS libraries and .NET/WebView runtimes require separate review.' },
     { name: 'job-tracker:node-build-version', value: process.version },
     { name: 'job-tracker:install-scripts', value: 'disabled' },
+    { name: 'job-tracker:copilot-mode', value: JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'))).dependencies?.['@github/copilot-sdk'] ? 'development-dependency' : 'optional' },
   ];
   if (fs.existsSync(path.join(cwd, 'runtime/node-runtime.json'))) {
     const metadata = JSON.parse(fs.readFileSync(path.join(cwd, 'runtime/node-runtime.json')));

@@ -283,7 +283,7 @@ function buildMacArm64() {
       macosMeets50MBTarget: unpackedBytes <= 50 * 1024 * 1024,
       macosMeets15MBTarget: unpackedBytes <= 15 * 1024 * 1024,
       windows50PercentReductionVerified: false,
-      note: 'macOS .app size is measured; the boolean fields report whether the targets are met. Copilot runtime increases the application size. Windows reduction remains unverified until a measured Windows build is available.',
+      note: 'macOS .app size is measured; the boolean fields report whether the targets are met. Copilot dependencies are an optional download and are excluded from the base app. Windows reduction remains unverified until a measured Windows build is available.',
     },
     dynamicLinkDependencies: {
       macosHostBinary: dynamicLibs,

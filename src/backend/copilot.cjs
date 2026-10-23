@@ -4,6 +4,7 @@ const path = require('node:path');
 const os = require('node:os');
 const crypto = require('node:crypto');
 const { setTimeout: sleep } = require('node:timers/promises');
+const { CopilotPack } = require('./copilot-pack.cjs');
 
 class CopilotError extends Error {}
 const DEVICE_URL = 'https://github.com/login/device';
@@ -12,14 +13,6 @@ function input(value, keys) {
 }
 function validClientId(value) { return typeof value === 'string' && /^[A-Za-z0-9._-]{5,100}$/.test(value); }
 function validToken(value) { return typeof value === 'string' && /^(gho_|ghu_)[A-Za-z0-9_]{8,512}$/.test(value); }
-function runtimeAvailable() {
-  try {
-    require.resolve('@github/copilot-sdk');
-    const suffixes = [`${process.platform}-${process.arch}`, ...(process.platform === 'linux' ? [`linuxmusl-${process.arch}`] : [])];
-    return suffixes.some((suffix) => { try { require.resolve(`@github/copilot-sdk-${suffix}/package.json`); return true; } catch { return false; } });
-  } catch { return false; }
-}
-
 // A deliberately small environment: never inherit gh/CLI auth, BYOK, proxy,
 // tracing, NODE_OPTIONS, custom CLI paths, or personal configuration directories.
 function isolatedEnvironment(dir) {
@@ -39,6 +32,7 @@ function isolatedEnvironment(dir) {
 class CopilotService {
   constructor({ dataDir, safeStorage, fetch: request = globalThis.fetch, clientFactory, delay = sleep, now = Date.now, operationTimeout = 180000 }) {
     this.file = path.join(dataDir, 'copilot.enc');
+    this.pack = new CopilotPack({ directory: path.join(dataDir, 'extensions', 'copilot'), fetch: request });
     this.storage = safeStorage; this.fetch = request; this.delay = delay; this.now = now;
     this.clientFactory = clientFactory; this.operationTimeout = operationTimeout;
     this.login = null; this.loginError = ''; this.active = null; this.models = []; this.quota = null; this.epoch = 0;
@@ -73,7 +67,7 @@ class CopilotService {
     const data = this.read();
     const expired = Boolean(data?.expiresAt && data.expiresAt <= this.now());
     return { clientId: data?.clientId || '', connected: Boolean(data?.token && !expired), login: data?.login || '',
-      runtimeAvailable: Boolean(this.clientFactory) || runtimeAvailable(), generating: Boolean(this.active),
+      runtimeAvailable: Boolean(this.clientFactory) || this.pack.status().installed, pack: this.pack.status(), generating: Boolean(this.active),
       signingIn: Boolean(this.login), userCode: this.login?.userCode || '', verificationUri: this.login ? DEVICE_URL : '',
       loginExpiresAt: this.login?.expiresAt || null, error: expired ? 'ログインの有効期限が切れました。再認証してください。' : this.loginError,
       models: this.models, quota: this.quota };
@@ -107,10 +101,10 @@ class CopilotService {
     return data;
   }
   async beginLogin() {
-    if (this.login || this.active) throw new CopilotError('別の認証・生成が進行中です。');
+    if (this.login || this.active || this.pack.operation) throw new CopilotError('別の認証・生成・追加機能の処理が進行中です。');
     const config = this.read();
     if (!config?.clientId) throw new CopilotError('先にOAuth AppのClient IDを保存してください。');
-    if (!(this.clientFactory || runtimeAvailable())) throw new CopilotError('このOS用のCopilotランタイムがありません。対象OSでnpm ciを実行してください。');
+    if (!(this.clientFactory || this.pack.status().installed)) throw new CopilotError('先にCopilot追加機能をダウンロードしてください。');
     const pending = { controller: new AbortController(), userCode: '', expiresAt: null, epoch: this.epoch };
     this.login = pending; this.loginError = '';
     try {
@@ -163,7 +157,7 @@ class CopilotService {
     return this.getStatus();
   }
   async withClient(task) {
-    if (this.active || this.login) throw new CopilotError('別のCopilot処理が進行中です。');
+    if (this.active || this.login || this.pack.operation) throw new CopilotError('別のCopilot処理が進行中です。');
     const data = this.read();
     if (!data?.token || (data.expiresAt && data.expiresAt <= this.now())) throw new CopilotError('Copilotにログインしてください。');
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'job-tracker-copilot-'));
@@ -174,8 +168,7 @@ class CopilotService {
     try {
       let create = this.clientFactory;
       if (!create) {
-        if (!runtimeAvailable()) throw new CopilotError('Copilotランタイムがありません。対象OSでnpm ciを実行してください。');
-        const { CopilotClient, RuntimeConnection } = require('@github/copilot-sdk');
+        const { CopilotClient, RuntimeConnection } = this.pack.load();
         create = (options) => new CopilotClient({ ...options, connection: RuntimeConnection.forStdio() });
       }
       active.client = create({ mode: 'empty', baseDirectory: path.join(dir, 'runtime'), workingDirectory: workspace,
@@ -236,6 +229,16 @@ class CopilotService {
       return text;
     });
   }
-  async shutdown() { this.epoch++; this.cancelLogin(); this.cancelGenerate(); try { await this.active?.client?.forceStop(); } catch {} }
+  async installPack() {
+    if (this.active || this.login) throw new CopilotError('認証・生成を中断してから追加機能を操作してください。');
+    await this.pack.install(); return this.getStatus();
+  }
+  cancelPack() { return this.pack.cancel(); }
+  removePack() {
+    if (this.active || this.login) throw new CopilotError('認証・生成を中断してから追加機能を削除してください。');
+    const result = this.pack.remove(); this.models = []; this.quota = null;
+    return { ...this.getStatus(), pendingRestart: result.pendingRestart };
+  }
+  async shutdown() { this.pack.cancel(); this.epoch++; this.cancelLogin(); this.cancelGenerate(); try { await this.active?.client?.forceStop(); } catch {} }
 }
-module.exports = { CopilotService, isolatedEnvironment, runtimeAvailable };
+module.exports = { CopilotService, isolatedEnvironment };

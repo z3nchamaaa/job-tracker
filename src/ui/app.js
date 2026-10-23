@@ -1761,13 +1761,18 @@
       const renderCopilot = () => {
         if (!root.contains(cpForm)) return;
         const s = state.copilotSession;
-        root.querySelector('#copilot-status-badge').textContent = s.connected ? `接続済み（${s.login || 'GitHub'}）` : s.signingIn ? 'GitHubでの承認待ち' : '未接続';
+        root.querySelector('#copilot-status-badge').textContent = s.pack?.installing ? '追加機能を準備中' : s.runtimeAvailable === false ? '追加機能未導入' : s.connected ? `接続済み（${s.login || 'GitHub'}）` : s.signingIn ? 'GitHubでの承認待ち' : '未接続';
         cpForm.querySelectorAll('input,button').forEach((el) => { el.disabled = copilotBusy || s.signingIn || s.generating; });
         const controls = root.querySelector('#copilot-controls');
-        controls.innerHTML = s.signingIn ? `<div class="copilot-device-code"><span>GitHubで次のコードを入力してください</span><strong>${escapeHtml(s.userCode || '取得中…')}</strong><button type="button" class="btn btn-sm btn-primary" id="copilot-open-device" ${s.userCode ? '' : 'disabled'}>GitHubで承認する ↗</button><button type="button" class="btn btn-sm btn-outlined" id="copilot-cancel-login">認証を中断</button></div>`
+        const pack = s.pack || {};
+        const packControls = `<p class="settings-note">Copilotは任意の追加機能です。初回のみ公式パッケージを取得します（展開後約140 MiB・OSで異なります）。企業データやログイン情報は追加機能の削除後も残ります。</p>${pack.installing ? `<p role="status">追加機能をダウンロード・検証中… ${pack.progress ? `${pack.progress.package}/${pack.progress.total}` : ''}</p><button type="button" id="copilot-pack-cancel" class="btn btn-sm btn-outlined">ダウンロードを中断</button>` : !s.runtimeAvailable ? `<button type="button" id="copilot-pack-install" class="btn btn-sm btn-primary" ${copilotBusy || pack.supported === false ? 'disabled' : ''}>Copilot追加機能をダウンロード</button>${pack.supported === false ? '<p class="settings-note">このOS・CPUには対応していません。</p>' : ''}` : `<button type="button" id="copilot-pack-remove" class="btn btn-sm btn-outlined" ${copilotBusy || s.signingIn || s.generating ? 'disabled' : ''}>Copilot追加機能を削除</button>`}`;
+        controls.innerHTML = packControls + (pack.pendingRemoval && !s.runtimeAvailable ? `<button type="button" id="copilot-pack-remove" class="btn btn-sm btn-outlined" ${copilotBusy ? 'disabled' : ''}>残った追加ファイルを削除</button>` : '') + (!s.runtimeAvailable || pack.installing ? '' : s.signingIn ? `<div class="copilot-device-code"><span>GitHubで次のコードを入力してください</span><strong>${escapeHtml(s.userCode || '取得中…')}</strong><button type="button" class="btn btn-sm btn-primary" id="copilot-open-device" ${s.userCode ? '' : 'disabled'}>GitHubで承認する ↗</button><button type="button" class="btn btn-sm btn-outlined" id="copilot-cancel-login">認証を中断</button></div>`
           : s.connected ? `<p class="settings-note">生成は元の企業追加画面から実行できます。モデル一覧・残り利用枠は下のボタンで確認できます。</p><button type="button" class="btn btn-sm btn-outlined" id="copilot-details" ${copilotBusy ? 'disabled' : ''}>モデル・利用枠を確認</button><button type="button" class="btn btn-sm btn-outlined" id="copilot-usage">GitHubの利用状況 ↗</button><button type="button" class="btn btn-sm btn-outlined" id="copilot-signout" ${copilotBusy ? 'disabled' : ''}>連携を解除</button><div class="copilot-quota">${s.quota === null ? '<p class="settings-note">残り利用枠は未取得です。取得できない場合はGitHubの利用状況で確認してください。</p>' : (s.quota || []).map((q) => `<p class="settings-note">${escapeHtml(({ chat: 'チャット', completions: '補完', premium_interactions: 'プレミアム利用枠', ai_credits: 'AIクレジット' })[q.key] || q.key)}：${q.unlimited ? '上限なし' : q.remainingPercentage === null ? '残量不明' : `残り ${q.remainingPercentage}%`}${q.resetDate ? ` ／ リセット ${escapeHtml(q.resetDate)}` : ''}</p>`).join('') || '<p class="settings-note">利用枠の情報がありません。</p>'}</div>`
-          : `<button type="button" class="btn btn-sm btn-primary" id="copilot-login" ${!s.clientId || !s.runtimeAvailable || copilotBusy ? 'disabled' : ''}>GitHubでCopilotにログイン</button>${s.runtimeAvailable === false ? '<p class="settings-note">このOS用のCopilotランタイムがありません。対象OSでnpm ciを実行してください。</p>' : ''}`;
-        if (s.error) cpMessage.textContent = s.error;
+          : `<button type="button" class="btn btn-sm btn-primary" id="copilot-login" ${!s.clientId || !s.runtimeAvailable || copilotBusy ? 'disabled' : ''}>GitHubでCopilotにログイン</button>`);
+        if (s.error || pack.error) cpMessage.textContent = s.error || pack.error;
+        controls.querySelector('#copilot-pack-install')?.addEventListener('click', () => copilotAction('installCopilotPack'));
+        controls.querySelector('#copilot-pack-remove')?.addEventListener('click', () => copilotAction('removeCopilotPack'));
+        controls.querySelector('#copilot-pack-cancel')?.addEventListener('click', () => ipcInvoke('cancelCopilotPack').catch((error) => { cpMessage.textContent = error.message; }));
         controls.querySelector('#copilot-open-device')?.addEventListener('click', () => openSafeExternalUrl('https://github.com/login/device'));
         controls.querySelector('#copilot-usage')?.addEventListener('click', () => openSafeExternalUrl('https://github.com/settings/copilot'));
         controls.querySelector('#copilot-login')?.addEventListener('click', () => copilotAction('beginCopilotLogin'));
@@ -1777,7 +1782,7 @@
       };
       const pollCopilot = () => {
         clearTimeout(copilotPoll);
-        if (!root.contains(cpForm) || !state.copilotSession.signingIn) return;
+        if (!root.contains(cpForm) || (!state.copilotSession.signingIn && !state.copilotSession.pack?.installing && !copilotBusy)) return;
         copilotPoll = setTimeout(async () => {
           try { state.copilotSession = await ipcInvoke('getCopilotStatus'); renderCopilot(); pollCopilot(); }
           catch (error) { if (root.contains(cpForm)) cpMessage.textContent = error.message; }
@@ -1787,11 +1792,14 @@
         if (copilotBusy) return;
         copilotBusy = true; cpMessage.textContent = '処理しています…'; renderCopilot();
         try {
-          await ipcInvoke(method, args);
+          const action = ipcInvoke(method, args); pollCopilot();
+          const result = await action;
           state.copilotSession = await ipcInvoke('getCopilotStatus');
           if (method === 'signOutCopilot' || method === 'configureCopilot') state.selectedCopilotModel = 'auto';
           if (root.contains(cpForm)) {
             cpMessage.textContent = method === 'configureCopilot' ? '保存しました。ログインボタンからGitHubで承認してください。' : method === 'signOutCopilot' ? 'このアプリの連携を解除しました。GitHub側の認可取消はOAuth App設定から行えます。' : '';
+            if (method === 'installCopilotPack') cpMessage.textContent = '追加機能を導入しました。GitHubへのログインに進めます。';
+            if (method === 'removeCopilotPack') cpMessage.textContent = result.pendingRestart ? '追加機能を無効にしました。使用中のファイルを解放するためアプリを終了し、再起動後にもう一度削除してください。' : '追加機能を削除しました。必要なときに再導入できます。';
             if (method === 'configureCopilot') state.modalDirty = ['#agent-name', '#agent-model', '#agent-key'].some((selector) => root.querySelector(selector).value.trim());
           }
         } catch (error) { if (root.contains(cpForm)) cpMessage.textContent = error.message; }

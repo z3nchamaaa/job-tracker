@@ -74,6 +74,9 @@ function createIpcDispatcher({ chatgptService, profileStore, updater, openExtern
 
   const handlers = Object.freeze({
     getCopilotStatus: async (arg) => { assertNoArg(arg, 'getCopilotStatus'); return copilotService.getStatus(); },
+    installCopilotPack: async (arg) => { assertNoArg(arg, 'installCopilotPack'); return copilotService.installPack(); },
+    cancelCopilotPack: async (arg) => { assertNoArg(arg, 'cancelCopilotPack'); return copilotService.cancelPack(); },
+    removeCopilotPack: async (arg) => { assertNoArg(arg, 'removeCopilotPack'); return copilotService.removePack(); },
     configureCopilot: async (arg) => { if (!isPlainObject(arg) || hasForbiddenKeys(arg)) throw new Error('Copilot設定が不正です。'); return copilotService.configure(arg); },
     beginCopilotLogin: async (arg) => { assertNoArg(arg, 'beginCopilotLogin'); return copilotService.beginLogin(); },
     cancelCopilotLogin: async (arg) => { assertNoArg(arg, 'cancelCopilotLogin'); return copilotService.cancelLogin(); },

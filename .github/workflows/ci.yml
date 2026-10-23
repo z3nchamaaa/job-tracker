@@ -35,6 +35,8 @@ jobs:
       - run: npm run sbom
       - name: Bundled Node works without a system Node
         run: node scripts/test-bundled-node.cjs
+      - name: Optional Copilot pack installs without npm
+        run: node scripts/check-copilot-pack.cjs --download
       - name: Windows Desktop Runtime prerequisite
         if: runner.os == 'Windows'
         shell: powershell
