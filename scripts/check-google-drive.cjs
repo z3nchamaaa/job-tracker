@@ -34,6 +34,7 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     browser=await launchPage((await app.start(0)).bootstrapUrl);
     const evaluate=(s)=>browser.evaluate(s), click=(id)=>evaluate(`document.getElementById('${id}').click()`);
     const wait=async(s)=>{for(let i=0;i<200;i++){if(await evaluate(s))return;await new Promise(r=>setTimeout(r,30));}throw new Error('Timed out: '+s);};
+    const complete = (text, control = 'drive-connect') => wait(`document.getElementById('drive-message').textContent.includes(${JSON.stringify(text)}) && !document.getElementById(${JSON.stringify(control)}).disabled`);
     await wait("Boolean(document.querySelector('[data-empty-add=prompt]'))");await click('btn-data-manage');await wait("Boolean(document.getElementById('drive-config-form'))");
     assert.equal(network,0);assert.equal(authCalls,0);
     await wait("Boolean(document.getElementById('drive-connect'))");
@@ -42,20 +43,20 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     if (defaultClient) {
       await click('drive-connect'); await wait("!document.getElementById('drive-upload').disabled");
       await evaluate('window.confirm=()=>true'); await click('drive-forget');
-      await wait("document.getElementById('drive-message').textContent.includes('解除しました')");
+      await complete('解除しました');
       assert.equal(await evaluate("document.getElementById('drive-connect').disabled"), false);
     }
     const beforeCustomSetup = network;
     await evaluate("window.driveErrors=[];window.addEventListener('unhandledrejection',e=>window.driveErrors.push(String(e.reason)));window.confirm=()=>true;document.querySelector('.drive-config').open=true;document.getElementById('drive-client-id').value='123456789-synthetic.apps.googleusercontent.com';document.getElementById('drive-client-secret').value='synthetic-ui-secret';document.getElementById('drive-config-form').requestSubmit()");
-    await wait("document.getElementById('drive-message').textContent.includes('設定を保存しました')");assert.equal(network,beforeCustomSetup);
+    await complete('設定を保存しました');assert.equal(network,beforeCustomSetup);
     assert.equal(await evaluate("document.getElementById('drive-client-secret').value"),'');
     await click('drive-connect');await wait("!document.getElementById('drive-upload').disabled");
     await evaluate('window.confirm=()=>false');await click('drive-upload');await wait("!document.getElementById('drive-upload').disabled");assert.equal(uploaded,null);
-    await evaluate('window.confirm=()=>true');await click('drive-upload');await wait("document.getElementById('drive-message').textContent.includes('保存しました')");assert(uploaded);
-    await click('drive-list');await wait("Boolean(document.querySelector('[data-drive-preview]'))");
+    await evaluate('window.confirm=()=>true');await click('drive-upload');await complete('保存しました', 'drive-list');assert(uploaded);
+    await click('drive-list');await complete('一覧を取得しました', 'drive-list');assert(await evaluate("Boolean(document.querySelector('[data-drive-preview]'))"));
     const before=JSON.stringify(app.dbStore.exportBackup(app.profileStore.getProfile()).data);
-    await evaluate("document.querySelector('[data-drive-preview]').click()");await wait("Boolean(document.getElementById('drive-restore')) && document.getElementById('drive-message').textContent.includes('プレビューしました')");assert.equal(JSON.stringify(app.dbStore.exportBackup(app.profileStore.getProfile()).data),before);
-    await click('drive-restore');await wait("document.getElementById('drive-message').textContent.includes('復元しました')");assert.equal(app.dbStore.getStatus().hasPreImportSnapshot,true);
+    await evaluate("document.querySelector('[data-drive-preview]').click()");await complete('プレビューしました', 'drive-list');assert(await evaluate("Boolean(document.getElementById('drive-restore'))"));assert.equal(JSON.stringify(app.dbStore.exportBackup(app.profileStore.getProfile()).data),before);
+    await click('drive-restore');await complete('復元しました', 'drive-list');assert.equal(app.dbStore.getStatus().hasPreImportSnapshot,true);
     await click('btn-rollback-import');await wait("document.getElementById('btn-rollback-import').disabled");
     for (const [width,height] of [[360,480],[390,844],[768,700]]) {
       await browser.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
@@ -63,10 +64,10 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     }
     const out=path.resolve(__dirname,'../dist/screenshots');fs.mkdirSync(out,{recursive:true});
     fs.writeFileSync(path.join(out,'google-drive-backup.png'),Buffer.from((await browser.call('Page.captureScreenshot',{format:'png'})).data,'base64'));
-    await click('drive-disconnect');await wait("document.getElementById('drive-upload').disabled");
+    await click('drive-disconnect');await complete('解除しました');assert(await evaluate("document.getElementById('drive-upload').disabled"));
     if (defaultClient) {
       assert.equal(await evaluate("document.getElementById('drive-use-bundled').hidden"), false);
-      await click('drive-use-bundled'); await wait("document.getElementById('drive-message').textContent.includes('共通の接続設定に戻しました')");
+      await click('drive-use-bundled'); await complete('共通の接続設定に戻しました');
       assert.equal(await evaluate("document.getElementById('drive-use-bundled').hidden"), true);
       assert.equal(await evaluate("document.getElementById('drive-connect').disabled"), false);
     }
