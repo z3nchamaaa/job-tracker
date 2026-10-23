@@ -127,9 +127,17 @@ def main():
 
     app_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     cli_path = os.path.join(app_root, "src", "backend", "cli.cjs")
+    node_path = os.path.join(app_root, "runtime", "node")
+    if not os.path.isfile(node_path) or not os.access(node_path, os.X_OK):
+        sys.stderr.write("アプリの起動に必要なファイルが見つかりません。アプリを入れ直してください。\n")
+        sys.exit(1)
+    backend_env = dict(os.environ)
+    backend_env.pop("NODE_OPTIONS", None)
+    backend_env.pop("NODE_PATH", None)
 
     proc = subprocess.Popen(
-        ["node", cli_path],
+        [node_path, cli_path],
+        env=backend_env,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

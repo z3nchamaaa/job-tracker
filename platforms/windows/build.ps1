@@ -9,6 +9,9 @@ $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $OutDir = Join-Path $RepoRoot "dist\$Runtime"
 $Version = (Get-Content (Join-Path $RepoRoot "package.json") -Raw | ConvertFrom-Json).version
 $Arch = $Runtime.Split('-')[-1]
+$Project = Join-Path $PSScriptRoot "JobTracker.WebView.csproj"
+$MinimumDotNetVersion = ([xml](Get-Content $Project -Raw)).Project.PropertyGroup.MinimumDesktopRuntimeVersion
+if ($MinimumDotNetVersion -notmatch '^10\.0\.\d+$') { throw "Invalid minimum Desktop Runtime version" }
 $NamesScript = Join-Path $RepoRoot "src\backend\artifact-names.cjs"
 
 if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
@@ -30,6 +33,8 @@ $AppDest = Join-Path $OutDir "app"
 New-Item -ItemType Directory -Force -Path $AppDest | Out-Null
 node (Join-Path $RepoRoot "scripts\stage.cjs") $AppDest windows ($Runtime.Split('-')[-1])
 if ($LASTEXITCODE -ne 0) { throw "Runtime staging failed" }
+node (Join-Path $RepoRoot "scripts\node-runtime.cjs") $AppDest win32 $Arch
+if ($LASTEXITCODE -ne 0) { throw "Bundled Node verification failed" }
 
 $ZipName = node $NamesScript $Version win32 $Arch zip
 if ($LASTEXITCODE -ne 0) { throw "Invalid artifact version or architecture" }
@@ -38,8 +43,10 @@ $TemporaryZip = Join-Path $RepoRoot "dist\$ZipName"
 Compress-Archive -Path "$OutDir\*" -DestinationPath $TemporaryZip -Force
 Move-Item $TemporaryZip (Join-Path $OutDir $ZipName) -Force
 if ($BuildInstaller) {
-  $Compiler = Get-Command ISCC.exe -ErrorAction Stop
-  & $Compiler.Source "/DMyAppVersion=$Version" "/DTargetArch=$Arch" "/DSourceDir=$OutDir" "/DOutputDir=$OutDir" (Join-Path $PSScriptRoot "installer.iss")
+  $Compiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+  $CompilerPath = if ($Compiler) { $Compiler.Source } else { Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe" }
+  if (!(Test-Path -LiteralPath $CompilerPath -PathType Leaf)) { throw "Inno Setup 6 is required to build the Windows installer" }
+  & $CompilerPath "/DMyAppVersion=$Version" "/DTargetArch=$Arch" "/DMinimumDotNetVersion=$MinimumDotNetVersion" "/DSourceDir=$OutDir" "/DOutputDir=$OutDir" (Join-Path $PSScriptRoot "installer.iss")
   if ($LASTEXITCODE -ne 0) { throw "Installer build failed" }
 }
 Push-Location $RepoRoot

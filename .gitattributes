@@ -3,3 +3,6 @@
 *.png binary
 *.ico binary
 *.icns binary
+
+# Preserve the upstream Node license byte-for-byte, including its formatting.
+licenses/Node.js.txt -text -whitespace

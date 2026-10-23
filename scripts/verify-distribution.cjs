@@ -4,12 +4,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const { runtimeFiles } = require('./stage.cjs');
+const { runtimeFiles, stagedContent } = require('./stage.cjs');
 const root = path.resolve(__dirname, '..');
 const app = path.join(root, 'dist/mac-arm64/就活トラッカー.app');
+require('./node-runtime.cjs').verifyBundledNode(path.join(app, 'Contents/Resources/app'), 'darwin', 'arm64');
+const nodeLibraries = execFileSync('/usr/bin/otool', ['-L', path.join(app, 'Contents/Resources/app/runtime/node')], { encoding: 'utf8' })
+  .split('\n').slice(1).map((line) => line.trim().split(' (')[0]).filter(Boolean);
+if (nodeLibraries.some((file) => !file.startsWith('/usr/lib/') && !file.startsWith('/System/'))) throw new Error('Bundled Node depends on non-system libraries');
 const sha = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const files = runtimeFiles('macos').map((relative) => {
-  const source = sha(path.join(root, relative));
+  const source = crypto.createHash('sha256').update(stagedContent(relative)).digest('hex');
   const bundled = sha(path.join(app, 'Contents/Resources/app', relative));
   if (source !== bundled) throw new Error('Stale bundle: ' + relative);
   return { file: relative, sha256: source };
@@ -17,6 +21,7 @@ const files = runtimeFiles('macos').map((relative) => {
 execFileSync('/usr/bin/codesign', ['--verify', '--deep', '--strict', app]);
 const policy = execFileSync(path.join(app, 'Contents/MacOS/JobTrackerHost'), ['--test-origin-policy'], { encoding: 'utf8' }).trim();
 if (policy !== 'ORIGIN_POLICY_SELF_TEST_OK') throw new Error('Native origin test failed');
+execFileSync(process.execPath, [path.join(root, 'scripts/test-macos-node-resolution.cjs')], { stdio: 'inherit' });
 const report = JSON.parse(fs.readFileSync(path.join(root, 'dist/size-report.json')));
 for (const asset of [report.compressedDistributionDownload.macosDmg, report.compressedDistributionDownload.macosZip]) {
   if (sha(path.join(root, asset.path)) !== asset.sha256) throw new Error('Archive digest mismatch');

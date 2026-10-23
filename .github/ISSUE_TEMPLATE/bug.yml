@@ -13,7 +13,7 @@ body:
   - type: input
     id: environment
     attributes:
-      label: OS・CPU・Nodeの版
+      label: OSとパソコンの種類（分かる範囲で）
     validations:
       required: true
   - type: textarea

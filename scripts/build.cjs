@@ -102,6 +102,8 @@ function buildMacArm64() {
 
   // 2. Stage the allowlisted application files only.
   copyRuntime(bundledAppDir, 'macos');
+  execFileSync(process.execPath, [path.join(repoRoot, 'scripts/node-runtime.cjs'), bundledAppDir, 'darwin', 'arm64'], { stdio: 'inherit' });
+  const bundledNode = require('./node-runtime.cjs').verifyBundledNode(bundledAppDir, 'darwin', 'arm64');
 
   // 3. Compile Swift Native Host
   const hostBinary = path.join(macosDir, 'JobTrackerHost');
@@ -128,7 +130,8 @@ function buildMacArm64() {
   fs.chmodSync(hostBinary, 0o755);
 
   // 4. Ad-hoc sign the bundle for local execution
-  execFileSync('/usr/bin/codesign', ['--force', '--deep', '--sign', '-', appBundle], {
+  execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', hostBinary], { stdio: 'inherit' });
+  execFileSync('/usr/bin/codesign', ['--force', '--sign', '-', appBundle], {
     stdio: 'inherit',
   });
 
@@ -240,7 +243,7 @@ function buildMacArm64() {
     platform: `${process.platform}-${process.arch}`,
     codeSigning: {
       signatureType: 'ad-hoc',
-      command: 'codesign --force --deep --sign -',
+      command: 'Sign native host and bundle; preserve original Node/Copilot vendor binaries',
       developerIdSigned: false,
       appleNotarized: false,
       note: 'Local build applies an ad-hoc signature (-). Distributing to external macOS machines without Gatekeeper warnings requires an Apple Developer ID Application certificate and notarization via xcrun notarytool.',
@@ -280,19 +283,18 @@ function buildMacArm64() {
       macosMeets50MBTarget: unpackedBytes <= 50 * 1024 * 1024,
       macosMeets15MBTarget: unpackedBytes <= 15 * 1024 * 1024,
       windows50PercentReductionVerified: false,
-      note: 'macOS .app size is measured; the boolean fields report whether the targets are met. Copilot runtime increases the application size. Windows reduction remains unverified until a measured Windows build is available.',
+      note: 'macOS .app size is measured; the boolean fields report whether the targets are met. Copilot dependencies are an optional download and are excluded from the base app. Windows reduction remains unverified until a measured Windows build is available.',
     },
     dynamicLinkDependencies: {
       macosHostBinary: dynamicLibs,
       additionalDownloadBytes: 0,
       note: 'All dynamic libraries linked by JobTrackerHost are macOS system frameworks and libSystem/Swift OS libraries.',
     },
-    requiredSharedRuntime: {
-      webviewEngine: {
-        macos: 'OS built-in WKWebView (WebKit.framework, 0 B extra download)',
-        windows: 'Microsoft Edge WebView2 Runtime (OS built-in on Windows 11 / shared Evergreen runtime)',
-        linux: 'WebKitGTK 4.1 (system shared package)',
-      },
+    bundledRuntime: {
+      nodejs: { ...bundledNode, separatelyInstalledNodeRequired: false,
+        note: 'Official, checksum-pinned Node executable and full third-party license are inside the app. npm, headers and developer tooling are not shipped.' },
+    },
+    buildMachineRuntime: {
       nodejsRuntime: {
         requiredVersion: require('../src/backend/runtime.cjs').SUPPORTED_NODE_RANGE,
         detectedVersion: process.version,
@@ -305,7 +307,14 @@ function buildMacArm64() {
         externalLinkedLibraries: linkedLibraries,
         measuredRuntimeFilesTotalBytes: nodeInstallDirBytes + linkedLibraries.bytes,
         externalNodeInstallerCompressedDownloadBytes: 'unmeasured',
-        note: 'localNodeInstallUnpackedBytes is the expanded disk usage of the Node installation used to build (including headers and libraries), NOT a compressed network download size. Node is a shared runtime and is not bundled.',
+        note: 'Build-machine Node measurement only. End users use the bundled Node and do not download or install a shared Node runtime.',
+      },
+    },
+    requiredSharedRuntime: {
+      webviewEngine: {
+        macos: 'OS built-in WKWebView (WebKit.framework, 0 B extra download)',
+        windows: 'Microsoft Edge WebView2 Runtime (OS built-in on Windows 11 / shared Evergreen runtime)',
+        linux: 'WebKitGTK 4.1 (system shared package)',
       },
       windowsDotNetHost: {
         requiredRuntime: '.NET 10 Desktop Runtime (net10.0-windows10.0.19041.0) + Microsoft.Web.WebView2 NuGet (1.0.4258.31)',
@@ -314,16 +323,13 @@ function buildMacArm64() {
       },
     },
     firstRunAcquisition: {
-      whenSharedNodeRuntimeAlreadyInstalled: {
+      includingBundledNode: {
         macosDmgDownloadBytes: dmgBytes,
         macosDmgDownloadFormatted: formatBytes(dmgBytes),
         macosZipDownloadBytes: zipBytes,
         macosZipDownloadFormatted: formatBytes(zipBytes),
       },
-      whenSharedNodeRuntimeMustBeFetchedFromNetwork: {
-        totalCompressedDownloadBytes: 'unmeasured',
-        reason: 'Compressed installer download size for Node.js varies by OS/distributor and is not fetched during offline local build.',
-      },
+      extraNodeRuntimeDownloadBytes: 0,
     },
     userDataAndCache: {
       bundledUserDataBytes: 0,

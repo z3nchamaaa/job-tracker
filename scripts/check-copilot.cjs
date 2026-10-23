@@ -9,9 +9,12 @@ const { launchPage } = require('./browser.cjs');
 (async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-copilot-ui-'));
   let browser, submitted, calls = 0, hold = false, rejectGeneration;
-  const state = { clientId: '', connected: false, login: '', runtimeAvailable: true, generating: false, signingIn: false, models: [], quota: null };
+  const state = { clientId: '', connected: false, login: '', runtimeAvailable: false, pack: { installed: false, supported: true, installing: false }, generating: false, signingIn: false, models: [], quota: null };
   const service = {
     getStatus: () => ({ ...state }),
+    installPack: async () => { state.runtimeAvailable = true; state.pack.installed = true; return { ...state }; },
+    removePack: () => { state.runtimeAvailable = false; state.pack.installed = false; return { ...state }; },
+    cancelPack: () => ({ cancelled: false }),
     configure: ({ clientId }) => { state.clientId = clientId; return { ...state }; },
     beginLogin: () => { state.signingIn = true; state.userCode = 'TEST-ONLY'; return { ...state }; },
     cancelLogin: () => { state.signingIn = false; state.userCode = ''; return { cancelled: true }; },
@@ -43,6 +46,9 @@ const { launchPage } = require('./browser.cjs');
     await wait("Boolean(document.querySelector('[data-empty-add=prompt]'))");
     await evaluate("window.reviewErrors=[];window.confirm=()=>true;window.addEventListener('unhandledrejection',e=>window.reviewErrors.push(String(e.reason)));document.getElementById('btn-add-prompt').click()");
     await register();
+    assert(await evaluate("Boolean(document.getElementById('copilot-pack-install')) && !document.getElementById('copilot-login')"));
+    await screenshot('copilot-pack-not-installed.png');
+    await click('copilot-pack-install'); await wait("Boolean(document.getElementById('copilot-login'))");
     assert(await evaluate("document.getElementById('copilot-login').disabled"));
     await evaluate("document.getElementById('copilot-client-id').value='synthetic-client';document.getElementById('copilot-client-id').dispatchEvent(new Event('input',{bubbles:true}));document.getElementById('copilot-setup-form').requestSubmit()");
     await wait("!document.getElementById('copilot-login').disabled");
@@ -77,6 +83,8 @@ const { launchPage } = require('./browser.cjs');
     assert.deepEqual(await evaluate('window.reviewErrors'), []);
     await click('btn-add-prompt'); await wait("Boolean(document.getElementById('btn-copilot-generate'))");
     await register(); await click('copilot-signout'); await wait("Boolean(document.getElementById('copilot-login'))");
+    await click('copilot-pack-remove'); await wait("Boolean(document.getElementById('copilot-pack-install'))");
+    await click('copilot-pack-install'); await wait("Boolean(document.getElementById('copilot-login'))");
     await back(); await wait("!document.getElementById('api-agent-select')");
     assert.equal(app.dbStore.listCompanies().length, 1); assert.equal(calls, 3);
     console.log('PASS: Client ID setup, device-code login/cancel, quota and model selection, explicit generation, preview before DB write, cancel and close during generation without exceptions, sign-out without company loss, 3 narrow viewports. OAuth/SDK/OS auth mocked; no real account or paid model calls.');

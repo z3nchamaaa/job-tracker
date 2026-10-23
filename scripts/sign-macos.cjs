@@ -54,6 +54,7 @@ function run(argv = process.argv.slice(2)) {
     // Copilot CLI is separately licensed for unmodified redistribution. Keep
     // its vendor signature and entitlements; never rewrite them with our ID.
     if (file.includes(`${path.sep}node_modules${path.sep}@github${path.sep}copilot-sdk-darwin-arm64${path.sep}`)) continue;
+    if (file === path.join(app, 'Contents/Resources/app/runtime/node')) continue;
     sign(file);
   }
   sign(app);

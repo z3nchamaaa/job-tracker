@@ -5,6 +5,64 @@ import Security
 import WebKit
 import LocalAuthentication
 
+struct NodeRuntimeUnavailable: LocalizedError {
+    var packaged = false
+    var errorDescription: String? {
+        if packaged { return "アプリの起動に必要なファイルを確認できません。アプリを入れ直してください。" }
+        return "開発用のNode.jsが見つかりません。対応版とJOB_TRACKER_NODE_PATHを確認してください。"
+    }
+}
+
+func resolveSupportedNode(appRoot: String) throws -> String {
+    let environment = ProcessInfo.processInfo.environment
+    let runtime = (appRoot as NSString).appendingPathComponent("src/backend/runtime.cjs")
+    let packaged = Bundle.main.resourcePath.map { appRoot == ($0 as NSString).appendingPathComponent("app") } ?? false
+    var candidates: [String] = []
+    if packaged {
+        guard FileManager.default.fileExists(atPath: (appRoot as NSString).appendingPathComponent("src/backend/cli.cjs")) else {
+            throw NodeRuntimeUnavailable(packaged: true)
+        }
+        // Installed apps use only their own runtime, never the user's shell.
+        candidates = [(appRoot as NSString).appendingPathComponent("runtime/node")]
+    } else if let explicit = environment["JOB_TRACKER_NODE_PATH"], !explicit.isEmpty {
+        // An explicit selection must fail closed rather than silently switching.
+        candidates = [explicit]
+    } else {
+        let asdfRoot = environment["ASDF_DATA_DIR"].map { URL(fileURLWithPath: $0) }
+            ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".asdf")
+        let installs = asdfRoot.appendingPathComponent("installs/nodejs")
+        let versions = (try? FileManager.default.contentsOfDirectory(atPath: installs.path)) ?? []
+        for version in versions.filter({ $0.range(of: #"^[0-9]+\.[0-9]+\.[0-9]+$"#, options: .regularExpression) != nil })
+            .sorted(by: { $0.compare($1, options: .numeric) == .orderedDescending }) {
+            // Use actual installations, not shims that depend on shell setup.
+            candidates.append(installs.appendingPathComponent(version).appendingPathComponent("bin/node").path)
+        }
+        candidates += ["/opt/homebrew/bin/node", "/usr/local/bin/node", "/usr/bin/node"]
+    }
+    for candidate in candidates where FileManager.default.isExecutableFile(atPath: candidate) {
+        let probe = Process()
+        probe.executableURL = URL(fileURLWithPath: candidate)
+        // Reuse the backend's security floors before opening any user data.
+        probe.arguments = ["-e", "require(process.argv[1]).assertSupportedRuntime();process.stdout.write(process.execPath)", runtime]
+        var probeEnvironment = environment
+        probeEnvironment.removeValue(forKey: "NODE_OPTIONS")
+        probeEnvironment.removeValue(forKey: "NODE_PATH")
+        probe.environment = probeEnvironment
+        let output = Pipe()
+        probe.standardOutput = output
+        probe.standardError = FileHandle.nullDevice
+        do { try probe.run() } catch { continue }
+        let deadline = Date().addingTimeInterval(2)
+        while probe.isRunning && Date() < deadline { Thread.sleep(forTimeInterval: 0.02) }
+        if probe.isRunning { probe.terminate(); continue }
+        probe.waitUntilExit()
+        guard probe.terminationStatus == 0 else { continue }
+        let resolved = String(data: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        if resolved.hasPrefix("/"), FileManager.default.isExecutableFile(atPath: resolved) { return resolved }
+    }
+    throw NodeRuntimeUnavailable(packaged: packaged)
+}
+
 func runAppAuthentication(availabilityOnly: Bool) -> Never {
     let context = LAContext()
     var error: NSError?
@@ -408,25 +466,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         return false
     }
 
-    func resolveNodeExecutable() -> String {
-        if let envNode = ProcessInfo.processInfo.environment["JOB_TRACKER_NODE_PATH"],
-           FileManager.default.isExecutableFile(atPath: envNode) {
-            return envNode
-        }
-        let candidates = [
-            "/opt/homebrew/bin/node",
-            "/usr/local/bin/node",
-            "/usr/bin/node"
-        ]
-        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
-            return path
-        }
-        return "/usr/bin/env"
-    }
-
     func resolveAppRoot() -> String {
         if let resourcePath = Bundle.main.resourcePath {
             let bundledApp = (resourcePath as NSString).appendingPathComponent("app")
+            // A damaged installed app must not fall back to a development
+            // checkout or a system runtime based on its working directory.
+            if Bundle.main.bundleURL.pathExtension == "app" { return bundledApp }
             if FileManager.default.fileExists(atPath: (bundledApp as NSString).appendingPathComponent("src/backend/cli.cjs")) {
                 return bundledApp
             }
@@ -448,16 +493,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         let bridgePath = (appRoot as NSString).appendingPathComponent("platforms/macos/bridge.js")
 
         let proc = Process()
-        let nodePath = resolveNodeExecutable()
-        if nodePath == "/usr/bin/env" {
-            proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-            proc.arguments = ["node", cliPath]
-        } else {
-            proc.executableURL = URL(fileURLWithPath: nodePath)
-            proc.arguments = [cliPath]
+        let nodePath: String
+        do { nodePath = try resolveSupportedNode(appRoot: appRoot) }
+        catch {
+            FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))
+            if smokeTestMode { exit(1) }
+            let alert = NSAlert()
+            alert.messageText = "アプリを起動できませんでした"
+            alert.informativeText = error.localizedDescription
+            alert.runModal()
+            NSApplication.shared.terminate(nil)
+            return
         }
+        proc.executableURL = URL(fileURLWithPath: nodePath)
+        proc.arguments = [cliPath]
 
         var env = ProcessInfo.processInfo.environment
+        env.removeValue(forKey: "NODE_OPTIONS")
+        env.removeValue(forKey: "NODE_PATH")
         env["JOB_TRACKER_HOST_BINARY"] = CommandLine.arguments[0]
         proc.environment = env
 
@@ -780,6 +833,15 @@ if args.contains("--unprotect") {
 }
 if args.contains("--test-origin-policy") {
     exit(runOriginPolicySelfTest())
+}
+if args.contains("--test-node-resolution") {
+    do {
+        print(try resolveSupportedNode(appRoot: AppDelegate().resolveAppRoot()))
+        exit(0)
+    } catch {
+        FileHandle.standardError.write(Data("\(error.localizedDescription)\n".utf8))
+        exit(1)
+    }
 }
 
 let app = NSApplication.shared

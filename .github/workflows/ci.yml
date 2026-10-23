@@ -33,6 +33,18 @@ jobs:
       - run: node --test --test-timeout=30000 test/*.test.cjs
       - run: npm run security:audit
       - run: npm run sbom
+      - name: Bundled Node works without a system Node
+        run: node scripts/test-bundled-node.cjs
+      - name: Optional Copilot pack installs without npm
+        run: node scripts/check-copilot-pack.cjs --download
+      - name: Windows Desktop Runtime prerequisite
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./platforms/windows/test-desktop-runtime.ps1
+      - name: Windows setup compiles (x64 and ARM64)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./platforms/windows/test-installer.ps1
       - name: Copilot UI and layout (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -40,6 +52,13 @@ jobs:
           node scripts/check-ai-agents.cjs
           node scripts/check-kanban-expansion.cjs
           node scripts/check-dashboard-scroll.cjs
+      - name: Native Node.js detection (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist/verification
+          swiftc -O platforms/macos/Host.swift -framework AppKit -framework WebKit -framework Security -framework CryptoKit -framework LocalAuthentication -o dist/verification/JobTrackerHost
+          node scripts/test-macos-node-resolution.cjs dist/verification/JobTrackerHost
+          node scripts/test-macos-node-resolution.cjs dist/verification/JobTrackerHost --package-fixture
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -102,7 +121,7 @@ jobs:
         with:
           dotnet-version: 10.0.402
       - run: npm ci --ignore-scripts --cpu=${{ matrix.arch }}
-      - run: ./platforms/windows/build.ps1 -Runtime ${{ matrix.runtime }}
+      - run: ./platforms/windows/build.ps1 -Runtime ${{ matrix.runtime }} -BuildInstaller
       - run: node scripts/release-check.cjs --candidate dist/${{ matrix.runtime }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -110,6 +129,7 @@ jobs:
           retention-days: 7
           path: |
             dist/${{ matrix.runtime }}/*-portable.zip
+            dist/${{ matrix.runtime }}/job-tracker-*-win-*.exe
             dist/${{ matrix.runtime }}/*.cdx.json
             dist/${{ matrix.runtime }}/SHA256SUMS
             dist/${{ matrix.runtime }}/release-manifest.json

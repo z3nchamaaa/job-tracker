@@ -13,7 +13,12 @@ function fixture(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(),'jt-release-'));
   t.after(() => fs.rmSync(dir, { recursive:true,force:true }));
   for (const ext of ['zip','dmg']) fs.writeFileSync(path.join(dir,artifactName('2.0.0','darwin','arm64',ext)), 'synthetic package');
-  const sbom = { bomFormat:'CycloneDX',specVersion:'1.5',metadata:{component:{version:'2.0.0'}},components:[{name:'@github/copilot-sdk-darwin-arm64',version:'1.0.23'}] };
+  const sbom = { bomFormat:'CycloneDX',specVersion:'1.5',metadata:{component:{version:'2.0.0'},properties:[{name:'job-tracker:copilot-mode',value:'optional'}]},components:[] };
+  const node = require('../scripts/node-runtime.cjs').getNodeSpec('darwin', 'arm64');
+  sbom.components.push({ name: 'Node.js', version: node.version,
+    hashes: [{ alg: 'SHA-256', content: node.binarySha256 }],
+    properties: [{ name: 'job-tracker:bundled-target', value: 'darwin-arm64' },
+      { name: 'job-tracker:archive-sha256', value: node.archiveSha256 }] });
   const save = () => { fs.writeFileSync(path.join(dir,artifactName('2.0.0','darwin','arm64','cdx.json')),JSON.stringify(sbom)); writeManifest(dir); };
   save(); return {dir,sbom,save};
 }
@@ -39,10 +44,10 @@ test('manifest rejects duplicate and traversing paths', (t) => {
   manifest.assets[0].name='../outside.zip'; fs.writeFileSync(file,JSON.stringify(manifest));
   assert.equal(checkCandidate(dir,{version:'2.0.0'})[0].passed,false);
 });
-test('missing target native runtime or stale SBOM prevents release readiness', (t) => {
+test('bundled Copilot dependency or stale SBOM prevents release readiness', (t) => {
   const {dir,sbom,save}=fixture(t);
-  sbom.components[0].name='@github/copilot-sdk-win32-x64'; save();
-  assert.equal(checkCandidate(dir,{version:'2.0.0'}).find(c=>c.name==='target Copilot runtime').passed,false);
+  sbom.components.push({name:'@github/copilot-sdk-win32-x64',version:'1.0.23'}); save();
+  assert.equal(checkCandidate(dir,{version:'2.0.0'}).find(c=>c.name==='optional Copilot pack').passed,false);
   sbom.metadata.component.version='1.0.0'; save();
   assert.equal(checkCandidate(dir,{version:'2.0.0'}).find(c=>c.name==='platform SBOM').passed,false);
 });
@@ -53,4 +58,14 @@ test('signing is dry-run by default and requires explicit matching identity to e
   const options=parseOptions(['--identity','Developer ID Application: Example (AAAAAAAAAA)','--team-id','AAAAAAAAAA','--keychain-profile','example','--execute']);
   assert.equal(options.execute,true);
   assert.throws(()=>parseOptions(['--unknown']));
+});
+test('missing, wrong-CPU or unpinned bundled Node prevents release readiness', (t) => {
+  const { dir, sbom, save } = fixture(t);
+  const node = sbom.components[0];
+  node.version = '26.12.0'; save();
+  assert.equal(checkCandidate(dir, { version: '2.0.0' }).find(c => c.name === 'bundled Node runtime').passed, false);
+  node.version = '26.12.1'; node.properties[0].value = 'win32-x64'; save();
+  assert.equal(checkCandidate(dir, { version: '2.0.0' }).find(c => c.name === 'bundled Node runtime').passed, false);
+  sbom.components.pop(); save();
+  assert.equal(checkCandidate(dir, { version: '2.0.0' }).find(c => c.name === 'bundled Node runtime').passed, false);
 });
