@@ -122,6 +122,24 @@ namespace JobTracker.Host
         private Uri? _allowedOriginUri;
         private readonly bool _smokeTest;
 
+        private void ApplyWindowAppearance(string mode)
+        {
+            bool isDark = mode == "dark";
+            BackColor = isDark ? Color.FromArgb(23, 19, 28) : Color.FromArgb(254, 247, 255);
+            _webView.DefaultBackgroundColor = BackColor;
+            int dark = isDark ? 1 : 0;
+            DwmSetWindowAttribute(Handle, 20, ref dark, sizeof(int));
+            // Match the web header while keeping native caption buttons, resizing,
+            // Snap layouts and the system menu. These colors are supported on Windows 11;
+            // older Windows versions retain their standard caption appearance.
+            int background = ColorTranslator.ToWin32(BackColor);
+            int foreground = ColorTranslator.ToWin32(isDark
+                ? Color.FromArgb(238, 231, 241) : Color.FromArgb(29, 27, 32));
+            if (SystemInformation.HighContrast) background = foreground = -1; // Use Windows' accessible caption colors.
+            DwmSetWindowAttribute(Handle, 35, ref background, sizeof(int)); // DWMWA_CAPTION_COLOR
+            DwmSetWindowAttribute(Handle, 36, ref foreground, sizeof(int)); // DWMWA_TEXT_COLOR
+        }
+
         public MainWindow(bool smokeTest)
         {
             _smokeTest = smokeTest;
@@ -132,6 +150,7 @@ namespace JobTracker.Host
             MinimumSize = new Size(360, 420);
             StartPosition = FormStartPosition.CenterScreen;
             MainMenuStrip = null;
+            Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
             _webView = new WebView2
             {
@@ -267,6 +286,7 @@ namespace JobTracker.Host
             _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false;
             _webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+            _webView.CoreWebView2.Settings.IsNonClientRegionSupportEnabled = true;
 
             if (File.Exists(bridgePath))
             {
@@ -286,10 +306,7 @@ namespace JobTracker.Host
                     if (appearance.RootElement.GetProperty("type").GetString() != "appearance") return;
                     string? mode = appearance.RootElement.GetProperty("mode").GetString();
                     if (mode != "dark" && mode != "light") return;
-                    BackColor = mode == "dark" ? Color.FromArgb(23, 19, 28) : Color.FromArgb(254, 247, 255);
-                    _webView.DefaultBackgroundColor = BackColor;
-                    int dark = mode == "dark" ? 1 : 0;
-                    DwmSetWindowAttribute(Handle, 20, ref dark, sizeof(int));
+                    ApplyWindowAppearance(mode);
                 }
                 catch { /* Ignore malformed appearance messages. */ }
             };
