@@ -21,6 +21,23 @@ namespace JobTracker.Host
         [STAThread]
         private static int Main(string[] args)
         {
+            if (args.Contains("--open-external"))
+            {
+                try
+                {
+                    if (!MainWindow.TryGetSafeExternalHttpsUri(Console.In.ReadToEnd(), out string safeUri)) return 1;
+                    using var browser = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = safeUri,
+                        Verb = "open",
+                        UseShellExecute = true,
+                        WindowStyle = ProcessWindowStyle.Normal
+                    });
+                    return 0;
+                }
+                catch { return 1; }
+            }
+
             if (args.Contains("--protect"))
             {
                 return RunDpapiProtect();

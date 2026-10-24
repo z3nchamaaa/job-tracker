@@ -49,6 +49,18 @@ test('OAuth uses PKCE, state, loopback and only appdata; wrong state cannot cons
   assert.equal(crypto.createHash('sha256').update(fields.get('code_verifier')).digest('base64url'),auth.searchParams.get('code_challenge'));
   assert(!auth.href.includes('client_secret'));
 });
+test('Browser launch failure clears the pending Google login so it can be retried', async (t) => {
+  let attempts = 0;
+  const { service } = fixture(t, { openExternal: async () => { attempts++; throw new Error('synthetic launch failure'); } });
+  service.configure({ clientId: CLIENT });
+  for (let i = 0; i < 2; i++) {
+    await assert.rejects(service.beginLogin(), /Google認証画面を開けませんでした/);
+    assert.equal(service.getStatus().signingIn, false);
+    assert.equal(service.login, null);
+  }
+  assert.equal(attempts, 2);
+});
+
 test('cancelled authorization cannot save a late exchange response', async (t) => {
   let auth, release, started; const reached=new Promise(r=>{started=r;});
   const {service}=fixture(t,{openExternal:async(u)=>{auth=new URL(u);},fetch:async()=>{started();return new Promise(r=>{release=()=>r(successToken());});}});
