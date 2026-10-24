@@ -1,6 +1,6 @@
 # 依存・ライセンスと公式配布元
 
-確認日：2026-10-22。アプリ独自ソースはLICENSEのMIT。Copilot連携に公式SDKと対象OS用ランタイムを同梱します。Node.js 26.12.1の対象OS・CPU用実行ファイルと全文ライセンスを同梱します。システムWebViewは非同梱です。
+確認日：2026-10-24。アプリ独自ソースはLICENSEのMIT。Copilot連携の公式SDKと対象OS用ランタイムは、任意の追加機能として取得します。Node.js 26.12.1の対象OS・CPU用実行ファイルと全文ライセンスを同梱します。システムWebViewは非同梱です。
 
 | 要素 | 使用・配布範囲 | 公式元・ライセンス |
 | --- | --- | --- |
@@ -9,7 +9,7 @@
 | 内包Copilot CLI 1.0.100（OS別SDK runtime 1.0.23） | 任意のCopilot追加機能として、必要時に対象OSの公式バイナリを未改変で取得 | [固定版のGitHub Copilot CLI License](https://github.com/github/copilot-cli/blob/v1.0.100/LICENSE.md)。全文はlicenses/Copilot-CLI.txt。SDKのMITとは別条件で、CLIをアプリ独自のMITで再許諾しない。CLIは再署名・entitlement変更を行わず、元の通知を保持する。内蔵推移コンポーネントの完全監査を主張しない |
 | koffi 3.2.1／@koromix/koffiの対象OS版3.2.1 | Copilot追加機能の直接依存。アプリは分離したstdio実行を選択 | MIT、同梱packageのLICENSE.txt。installスクリプトは無効にし、公式prebuilt optional packageを使用 |
 | vscode-jsonrpc 8.2.1 | SDKの通信依存 | MIT、同梱License.txt／thirdpartynotices.txt |
-| zod 4.3.6 | SDKの型検証依存 | MIT、同梱LICENSE |
+| zod 4.6.6 | SDKの型検証依存 | MIT、同梱LICENSE |
 | macOS AppKit/WebKit/Security/CryptoKit/LocalAuthentication | OSシステム機能、非同梱 | Apple SDK/OS利用条件 |
 | Microsoft.Web.WebView2 1.0.4258.31 | Windowsのみ、NuGet成果物を利用 | [公式NuGet](https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.4258.31)、3条項BSD型の同梱LICENSE.txtをlicenses/Microsoft.Web.WebView2.txtに保持 |
 | System.Security.Cryptography.ProtectedData 10.0.13 | Windowsのみ、DPAPI | [公式NuGet](https://www.nuget.org/packages/System.Security.Cryptography.ProtectedData/10.0.13)、MIT（.NET Runtimeの通知も確認が必要） |

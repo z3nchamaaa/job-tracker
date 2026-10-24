@@ -42,6 +42,18 @@ test('opening status does not create files or contact the network', (t) => {
   assert.equal(pack.status().installed, false); assert.equal(pack.status().installing, false);
   assert.deepEqual(fs.readdirSync(dir), []);
 });
+test('a dependency-only pack update rejects the previous generation before loading any SDK', (t) => {
+  const { pack } = fixture(t);
+  const previous = structuredClone(require('../src/backend/copilot-pack-lock.json'));
+  for (const packages of Object.values(previous.targets)) packages.find((p) => p.name === 'zod').version = '4.3.6';
+  const previousId = crypto.createHash('sha256').update(JSON.stringify(previous)).digest('hex');
+  const directory = 'install-' + 'a'.repeat(32);
+  fs.mkdirSync(path.join(pack.directory, directory), { recursive: true });
+  fs.writeFileSync(path.join(pack.directory, 'current.json'), JSON.stringify({ id: previousId, target: process.platform + '-' + process.arch, directory }));
+  assert.equal(pack.status().installed, false);
+  assert.throws(() => pack.load());
+  assert.equal(fs.existsSync(path.join(pack.directory, directory)), true);
+});
 test('checksum mismatch never reaches extraction or activation, cleans up and permits retry', async (t) => {
   const { pack } = fixture(t); let extracted = false;
   pack.fetch = async () => new Response('not the pinned official archive');
