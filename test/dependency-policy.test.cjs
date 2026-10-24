@@ -22,6 +22,9 @@ test('Dependency policy rejects unapproved packages, tampered origin/version and
   assert.throws(check((lock) => { lock.packages['node_modules/zod'].version = '999.0.0'; }), /Unapproved/);
   assert.throws(check((lock) => { lock.packages['node_modules/zod'].hasInstallScript = true; }), /install script/);
   assert.throws(check((lock) => { lock.packages['node_modules/unapproved'] = { version: '1.0.0' }; }), /Unapproved/);
+  fs.writeFileSync(path.join(dir, 'package-lock.json'), JSON.stringify(original));
+  fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ ...pkg, overrides: {} }));
+  assert.throws(() => verifyDependencyPolicy(dir), /override/);
 });
 
 test('Cross-platform staging excludes the host native Copilot runtime from other OS packages', () => {
