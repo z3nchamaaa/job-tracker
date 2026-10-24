@@ -99,6 +99,7 @@ function buildMacArm64() {
     path.join(repoRoot, 'assets', 'icons', 'app-icon.icns'),
     path.join(resourcesDir, 'app-icon.icns')
   );
+  require('./macos-icon.cjs').stage(resourcesDir);
 
   // 2. Stage the allowlisted application files only.
   copyRuntime(bundledAppDir, 'macos');

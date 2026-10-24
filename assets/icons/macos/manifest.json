@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "iconName": "AppIcon",
+  "inputs": {
+    "assets/icons/app-icon.png": "ed752ddb202d20a5e57420490a0293e243dc6814c787ad871dd8a60e2d1c2fb7",
+    "assets/icons/macos/icon.json": "6a46354627c4955a436dffffa5653f9b8606c610e8adf5973eb76788afd18874",
+    "scripts/macos-icon.cjs": "2f391e4f23bb92c170a9eb806cce34087a44afce5d545ec3056ad2d837595a79"
+  },
+  "assetsSha256": "c0f665bce6c75dc6e255df70b98d3be8199a0e592b175dd23e603c6607ee5071",
+  "compiler": "Xcode 26.6\nBuild version 17F113"
+}

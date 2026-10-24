@@ -23,6 +23,7 @@ const { EventInputError } = require("../shared/event-input.cjs");
 const { AppSettingsStore, createNativeAppAuth, createAppSettingsService } = require('./app-settings.cjs');
 const { AiAgents } = require('./ai-agents.cjs');
 const { CopilotService } = require('./copilot.cjs');
+const { GoogleDriveService } = require('./google-drive.cjs');
 
 const MAX_JSON_BODY_BYTES = 60 * 1024 * 1024; // 60 MiB (allows up to 50MiB base64 SQLite import)
 const DEFAULT_BODY_LIMIT = 512 * 1024; // 512 KiB for normal API requests
@@ -203,7 +204,9 @@ function createAppServer(options = {}) {
 
   const aiAgents = new AiAgents({ dataDir: authDir, safeStorage, fetch: options.agentFetch || options.fetch || globalThis.fetch });
   const copilotService = options.copilotService || new CopilotService({ dataDir: authDir, safeStorage, fetch: options.copilotFetch || globalThis.fetch });
+  const googleDriveService = options.googleDriveService || new GoogleDriveService({ dataDir: authDir, safeStorage, openExternal, dbStore, profileStore, fetch: options.driveFetch || globalThis.fetch, ...(options.driveDefaultClient !== undefined ? { defaultClient: options.driveDefaultClient } : {}) });
   const ipcDispatcher = createIpcDispatcher({
+    googleDriveService,
     aiAgents,
     copilotService,
     appSettingsService,
@@ -376,6 +379,9 @@ function createAppServer(options = {}) {
         return;
       }
 
+      if (method === "GET" && pathname === "/google-drive.js") {
+        serveStaticFile(res, path.join(uiDir, "google-drive.js"), "application/javascript; charset=utf-8"); return;
+      }
       if (method === "GET" && pathname === "/app.js") {
         serveStaticFile(res, path.join(uiDir, "app.js"), "application/javascript; charset=utf-8");
         return;
@@ -727,6 +733,7 @@ function createAppServer(options = {}) {
 
   async function stop() {
     aiAgents.cancel();
+    googleDriveService.shutdown();
     await copilotService.shutdown();
     try {
       if (updater && typeof updater.shutdown === "function") {

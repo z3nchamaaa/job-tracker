@@ -1,0 +1,23 @@
+{
+  "fill-specializations": [
+    { "value": { "solid": "srgb:0.45000,0.28000,0.80000,1.00000" } }
+  ],
+  "groups": [
+    {
+      "blur-material": null,
+      "layers": [
+        {
+          "image-name": "artwork.png",
+          "name": "就活トラッカー",
+          "glass": false,
+          "position": { "scale": 1.21, "translation-in-points": [0, 0] }
+        }
+      ],
+      "lighting": "individual",
+      "shadow": { "kind": "neutral", "opacity": 0 },
+      "specular": false,
+      "translucency": { "enabled": false, "value": 0 }
+    }
+  ],
+  "supported-platforms": { "squares": "shared" }
+}

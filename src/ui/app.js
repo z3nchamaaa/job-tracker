@@ -3502,6 +3502,8 @@
             <button type="button" id="btn-export-backup" class="btn btn-primary">⬇ JSONバックアップをダウンロード</button>
           </div>
 
+          <div class="panel" id="google-drive-panel"></div>
+
           <!-- Section 2: Import with Preview & Rollback -->
           <div class="panel">
             <h3 class="panel-title" style="margin-bottom:6px">2. 旧版 SQLite (.db) / JSON バックアップからの明示インポート</h3>
@@ -3544,6 +3546,7 @@
       `,
       triggerEl,
       (root) => {
+        window.JobTrackerDrive.mount(root, { invoke: ipcInvoke, escapeHtml, onRestore: async () => { await loadAllData(); const rollback = root.querySelector('#btn-rollback-import'); if (rollback) rollback.disabled = false; } });
         root.querySelector('#btn-export-backup')?.addEventListener('click', async () => {
           try {
             const res = await apiRequest('GET', '/api/data/backup');
