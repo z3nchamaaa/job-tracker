@@ -1,6 +1,21 @@
 (function () {
   'use strict';
 
+  // Native WebView2 draggable regions preserve Windows' drag, double-click and
+  // system-menu behavior. Keep every interactive control out of those regions.
+  document.addEventListener('DOMContentLoaded', () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .app-header { -webkit-app-region: drag; app-region: drag; user-select: none; }
+      .app-header :is(button, a, input, select, textarea, [contenteditable], [tabindex]),
+      .app-header .header-actions, .app-header .view-nav,
+      body:has(.modal-root:not(.is-hidden)) .app-header {
+        -webkit-app-region: no-drag; app-region: no-drag;
+      }
+    `;
+    document.head.appendChild(style);
+  }, { once: true });
+
   const ALLOWED_METHODS = Object.freeze([
     'getAiAgents', 'saveAiAgent', 'removeAiAgent', 'generateWithAiAgent', 'cancelAiAgentGeneration',
     'getGoogleDriveStatus', 'beginGoogleDriveLogin', 'cancelGoogleDriveLogin', 'cancelGoogleDriveTransfer', 'prepareGoogleDriveBackup', 'configureGoogleDrive', 'disconnectGoogleDrive', 'uploadGoogleDriveBackup', 'listGoogleDriveBackups', 'previewGoogleDriveBackup', 'restoreGoogleDriveBackup',
