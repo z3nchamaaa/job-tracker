@@ -24,6 +24,7 @@ const { AppSettingsStore, createNativeAppAuth, createAppSettingsService } = requ
 const { AiAgents } = require('./ai-agents.cjs');
 const { CopilotService } = require('./copilot.cjs');
 const { GoogleDriveService } = require('./google-drive.cjs');
+const { createExternalBrowser } = require('./external-browser.cjs');
 
 const MAX_JSON_BODY_BYTES = 60 * 1024 * 1024; // 60 MiB (allows up to 50MiB base64 SQLite import)
 const DEFAULT_BODY_LIMIT = 512 * 1024; // 512 KiB for normal API requests
@@ -129,42 +130,7 @@ function createAppServer(options = {}) {
     hostBinaryPath: options.hostBinaryPath,
   });
 
-  const openExternal =
-    options.openExternal ||
-    (async (rawUrl) => {
-      if (typeof rawUrl !== "string") {
-        throw new Error("URLが不正です。");
-      }
-      const trimmed = rawUrl.trim();
-      if (!trimmed || trimmed.startsWith("-") || /[\u0000-\u001f\u007f\s"]/.test(trimmed)) {
-        throw new Error("不正なURL形式です。");
-      }
-      let parsed;
-      try {
-        parsed = new URL(trimmed);
-      } catch {
-        throw new Error("不正なURL形式です。");
-      }
-      if (
-        parsed.protocol !== "https:" ||
-        parsed.username !== "" ||
-        parsed.password !== "" ||
-        !parsed.hostname
-      ) {
-        throw new Error("外部ブラウザで開けるのは認証情報を含まない https:// のURLのみです。");
-      }
-      const safeHref = parsed.toString();
-      const { spawn } = require("node:child_process");
-      const cmd =
-        process.platform === "darwin"
-          ? "open"
-          : process.platform === "win32"
-          ? "explorer.exe"
-          : "xdg-open";
-      const args = process.platform === "darwin" ? ["--", safeHref] : [safeHref];
-      const child = spawn(cmd, args, { detached: true, stdio: "ignore", windowsHide: true });
-      child.unref();
-    });
+  const openExternal = options.openExternal || createExternalBrowser({ hostBinaryPath: options.hostBinaryPath });
 
   const chatgptService =
     options.chatgptService ||
