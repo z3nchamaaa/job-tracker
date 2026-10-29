@@ -14,7 +14,7 @@ const { launchPage } = require('./browser.cjs');
   try {
     app.profileStore.saveProfile({ version: 1, completed: true });
     for (let i = 0; i < 12; i++) app.dbStore.createCompany({ name: `架空の検討企業 ${i + 1}`, status: 'INTERESTED', industry: '動作確認用の架空データ', location: '架空の所在地' });
-    app.dbStore.createCompany({ name: '架空の早期選考企業', status: 'FINAL', isEarlySelection: true });
+    app.dbStore.createCompany({ name: '架空の早期選考企業', status: 'INTERESTED', isEarlySelection: true });
     app.dbStore.createCompany({ name: '架空の通常最終面接企業', status: 'FINAL' });
     const { bootstrapUrl } = await app.start(0);
     browser = await launchPage(bootstrapUrl, { width: 1440, height: 900 });

@@ -69,7 +69,7 @@
 
   const KANBAN_LANES = Object.freeze([
     Object.freeze({ key: "INTERESTED", label: "検討", isEarlyLane: false, statuses: Object.freeze(["INTERESTED"]) }),
-    Object.freeze({ key: "EARLY_SELECTION", label: "早期選考", isEarlyLane: true, statuses: Object.freeze(["INTERESTED", "APPLIED", "ES_PASSED", "INTERVIEWING", "FINAL"]) }),
+    Object.freeze({ key: "EARLY_SELECTION", label: "早期選考", isEarlyLane: true, statuses: Object.freeze(["INTERESTED"]) }),
     Object.freeze({ key: "APPLIED", label: "応募済み", isEarlyLane: false, statuses: Object.freeze(["APPLIED"]) }),
     Object.freeze({ key: "ES_PASSED", label: "ES通過", isEarlyLane: false, statuses: Object.freeze(["ES_PASSED"]) }),
     Object.freeze({ key: "INTERVIEWING", label: "面接", isEarlyLane: false, statuses: Object.freeze(["INTERVIEWING", "FINAL"]) }),
@@ -138,7 +138,7 @@
   }
 
   function isEarlyLaneCandidate(company) {
-    return Boolean(company && company.isEarlySelection) && !isResultStatus(company.status);
+    return Boolean(company && company.isEarlySelection) && company.status === "INTERESTED";
   }
 
   function getKanbanLanes(companies) {
