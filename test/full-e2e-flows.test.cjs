@@ -286,10 +286,10 @@ test('All 8 selection statuses, early selection lane deduplication vs terminal l
     const lanes = getKanbanLanes(allCompanies);
     const laneMap = Object.fromEntries(lanes.map((l) => [l.key, l.companies.map((c) => c.status)]));
 
-    // Non-terminal early selection companies (INTERESTED, ES_PASSED) appear ONLY in EARLY_SELECTION
-    assert.deepEqual(laneMap.EARLY_SELECTION.sort(), ['ES_PASSED', 'INTERESTED']);
+    // Only interested early-selection companies use the special lane.
+    assert.deepEqual(laneMap.EARLY_SELECTION, ['INTERESTED']);
     assert.equal(laneMap.INTERESTED.includes('INTERESTED'), false);
-    assert.equal(laneMap.ES_PASSED.includes('ES_PASSED'), false);
+    assert.deepEqual(laneMap.ES_PASSED, ['ES_PASSED']);
 
     // FINAL is grouped into INTERVIEWING lane alongside INTERVIEWING
     assert.deepEqual(laneMap.INTERVIEWING.sort(), ['FINAL', 'INTERVIEWING']);

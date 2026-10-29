@@ -541,6 +541,7 @@
               <span class="lane-expand-icon" aria-hidden="true">⤢</span>
             </button>
             </h2>
+            ${lane.isEarlyLane ? '<button type="button" class="btn btn-sm btn-tonal" data-add-early>＋ 早期選考の企業を追加</button>' : ''}
             <div class="lane-cards" tabindex="0" role="region" aria-label="${escapeHtml(lane.label)}の企業一覧">
               ${
                 lane.companies.length === 0
@@ -556,6 +557,7 @@
     `;
 
     bindCardActions(container);
+    container.querySelector('[data-add-early]')?.addEventListener('click', (e) => openManualAddModal(e.currentTarget, true));
     container.querySelectorAll('[data-lane-key]').forEach((el) => {
       el.addEventListener('click', (e) => {
         if (e.target.closest('button, a, input, select, textarea') && !e.target.closest('.lane-expand')) return;
@@ -580,6 +582,7 @@
       <div class="kanban-expanded-header">
         <button type="button" class="btn btn-outlined" data-collapse-lane>← 戻る</button>
         <h2 class="lane-title">${escapeHtml(lane.label)} <span class="lane-count tabular-nums">${lane.companies.length}社</span></h2>
+        ${lane.isEarlyLane ? '<button type="button" class="btn btn-sm btn-tonal" data-add-early>＋ 早期選考の企業を追加</button>' : ''}
       </div>
       <div class="lane-cards expanded-cards" tabindex="0" role="region" aria-label="${escapeHtml(lane.label)}の企業一覧">
         ${lane.companies.length ? lane.companies.map((company) => renderKanbanCard(company, lane)).join('') : '<div class="lane-empty">該当企業なし</div>'}
@@ -610,6 +613,7 @@
     const expansion = { panel, board, source, trigger, position, animation: null, closing: false };
     kanbanExpansion = expansion;
     bindCardActions(panel);
+    panel.querySelector('[data-add-early]')?.addEventListener('click', (e) => openManualAddModal(e.currentTarget, true));
     panel.querySelector('[data-collapse-lane]').addEventListener('click', collapseKanbanLane);
     if (focus) panel.querySelector('[data-collapse-lane]').focus({ preventScroll: true });
     if (animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -1516,7 +1520,7 @@
     );
   }
 
-  function openManualAddModal(triggerEl) {
+  function openManualAddModal(triggerEl, earlySelection = false) {
     openModal(
       `
       <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="manual-add-title">
@@ -1592,8 +1596,8 @@
               </div>
               <div class="form-field col-span-2">
                 <label class="checkbox-row">
-                  <input type="checkbox" name="isEarlySelection">
-                  <span>早期選考ルートとして管理する（カンバンの早期選考レーンに表示）</span>
+                  <input type="checkbox" name="isEarlySelection" ${earlySelection ? 'checked' : ''}>
+                  <span>早期選考ルートとして管理する（検討中のみ早期選考の箱に表示）</span>
                 </label>
               </div>
               <div class="form-field col-span-2">
@@ -2660,25 +2664,29 @@
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <h2 id="cd-modal-title" class="modal-title">${escapeHtml(company.name)}</h2>
               <span id="cd-header-stars" class="priority-stars">${escapeHtml(formatPriorityStars(company.priority))} (${escapeHtml(company.priority)}/5)</span>
-              ${company.isEarlySelection ? `<span class="chip chip-early">早期選考</span>` : ''}
+              <span id="cd-early-badge" class="chip chip-early" ${company.isEarlySelection ? '' : 'hidden'}>早期選考</span>
             </div>
             <p id="cd-header-subtitle" class="modal-subtitle">${escapeHtml([company.industry, company.jobType, company.location].filter(Boolean).join(' / ') || '業界・所在地未設定')}</p>
           </div>
           <div class="company-detail-actions">
-            <select id="cd-quick-priority" class="select" style="width:auto;padding:4px 8px;font-size:0.8rem" aria-label="志望度変更">
+            <select id="cd-quick-priority" data-no-dirty class="select" style="width:auto;padding:4px 8px;font-size:0.8rem" aria-label="志望度変更">
               <option value="5" ${company.priority === 5 ? 'selected' : ''}>志望度: ★★★★★ (5)</option>
               <option value="4" ${company.priority === 4 ? 'selected' : ''}>志望度: ★★★★☆ (4)</option>
               <option value="3" ${company.priority === 3 ? 'selected' : ''}>志望度: ★★★☆☆ (3)</option>
               <option value="2" ${company.priority === 2 ? 'selected' : ''}>志望度: ★★☆☆☆ (2)</option>
               <option value="1" ${company.priority === 1 ? 'selected' : ''}>志望度: ★☆☆☆☆ (1)</option>
             </select>
-            <select id="cd-quick-status" class="select" style="width:auto;padding:4px 8px;font-size:0.8rem" aria-label="選考ステータス変更">
+            <select id="cd-quick-status" data-no-dirty class="select" style="width:auto;padding:4px 8px;font-size:0.8rem" aria-label="選考ステータス変更">
               ${SELECTION_STATUSES.map((st) => {
                 const meta = STATUS_META[st] || { label: st };
                 return `<option value="${escapeHtml(st)}" ${company.status === st ? 'selected' : ''}>${escapeHtml(meta.label)}</option>`;
               }).join('')}
             </select>
             <button type="button" id="btn-cd-delete" class="btn btn-sm btn-danger">削除</button>
+            <label class="checkbox-row">
+              <input type="checkbox" id="cd-quick-early" data-no-dirty ${company.isEarlySelection ? 'checked' : ''}>
+              <span>早期選考</span>
+            </label>
             <button type="button" class="btn btn-sm btn-ghost" data-modal-close aria-label="閉じる">✕ 閉じる</button>
           </div>
         </div>
@@ -2719,6 +2727,10 @@
           if (prioSel) prioSel.value = String(company.priority);
           const statSel = root.querySelector('#cd-quick-status');
           if (statSel) statSel.value = company.status;
+          const earlyToggle = root.querySelector('#cd-quick-early');
+          if (earlyToggle) earlyToggle.checked = company.isEarlySelection;
+          const earlyBadge = root.querySelector('#cd-early-badge');
+          if (earlyBadge) earlyBadge.hidden = !company.isEarlySelection;
           const cSteps = root.querySelector('#cd-count-steps');
           if (cSteps) cSteps.textContent = String((company.steps || []).length);
           const cEvents = root.querySelector('#cd-count-events');
@@ -2751,6 +2763,23 @@
             showToast('選考ステータスを更新しました。', 'success');
           } catch (err) {
             showToast(err.message, 'error');
+          }
+        });
+
+        root.querySelector('#cd-quick-early')?.addEventListener('change', async (e) => {
+          const checkbox = e.currentTarget;
+          checkbox.disabled = true;
+          try {
+            await apiRequest('PATCH', `/api/companies/${encodeURIComponent(companyId)}`, {
+              isEarlySelection: checkbox.checked,
+            });
+            await refreshCompanyDetail();
+            showToast('早期選考の設定を更新しました。', 'success');
+          } catch (err) {
+            checkbox.checked = company.isEarlySelection;
+            showToast(err.message, 'error');
+          } finally {
+            checkbox.disabled = false;
           }
         });
 

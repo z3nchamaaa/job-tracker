@@ -54,6 +54,7 @@ jobs:
           node scripts/check-google-drive.cjs --without-default
           node scripts/check-ai-agents.cjs
           node scripts/check-kanban-expansion.cjs
+          node scripts/check-early-selection.cjs
           node scripts/check-dashboard-scroll.cjs
       - name: Native Node.js detection (macOS)
         if: runner.os == 'macOS'

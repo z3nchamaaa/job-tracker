@@ -229,23 +229,33 @@ test('calendar nextEvent, 1h fallback notice, Google Calendar URL, and RFC 5545 
   assert.ok(Buffer.byteLength(fold('SUMMARY:' + 'あ'.repeat(40)).split('\r\n')[0], 'utf8') <= 75);
 });
 
-test('Kanban early selection deduplication and FINAL interview lane placement', () => {
+test('Kanban early selection contains only flagged interested companies', () => {
   const companies = [
     { id: 'c1', name: '早期A', status: 'INTERVIEWING', isEarlySelection: true, priority: 4 },
     { id: 'c2', name: '通常最終B', status: 'FINAL', isEarlySelection: false, priority: 5 },
     { id: 'c3', name: '早期内定C', status: 'OFFER', isEarlySelection: true, priority: 5 },
+    { id: 'c4', name: '早期検討D', status: 'INTERESTED', isEarlySelection: true, priority: 3 },
+    { id: 'c5', name: '通常検討E', status: 'INTERESTED', isEarlySelection: false, priority: 3 },
   ];
   const lanes = getKanbanLanes(companies);
   const earlyLane = lanes.find((l) => l.key === 'EARLY_SELECTION');
   const interviewLane = lanes.find((l) => l.key === 'INTERVIEWING');
   const offerLane = lanes.find((l) => l.key === 'OFFER');
 
-  // c1 is in EARLY_SELECTION and NOT duplicated in INTERVIEWING
-  assert.deepEqual(earlyLane.companies.map((c) => c.id), ['c1']);
-  // c2 (FINAL) is placed in INTERVIEWING lane
-  assert.deepEqual(interviewLane.companies.map((c) => c.id), ['c2']);
+  assert.deepEqual(earlyLane.companies.map((c) => c.id), ['c4']);
+  assert.deepEqual(lanes.find((l) => l.key === 'INTERESTED').companies.map((c) => c.id), ['c5']);
+  // Early flags persist after applying, but companies follow their actual status.
+  assert.deepEqual(interviewLane.companies.map((c) => c.id), ['c2', 'c1']);
   // c3 (OFFER, terminal stage) is placed in OFFER lane
   assert.deepEqual(offerLane.companies.map((c) => c.id), ['c3']);
+
+  for (const status of ['INTERESTED', 'APPLIED', 'ES_PASSED', 'INTERVIEWING', 'FINAL', 'OFFER', 'REJECTED', 'WITHDRAWN']) {
+    for (const isEarlySelection of [false, true]) {
+      const placed = getKanbanLanes([{ id: 'only', status, isEarlySelection }]).filter((lane) => lane.companies.length);
+      const expected = status === 'INTERESTED' && isEarlySelection ? 'EARLY_SELECTION' : status === 'FINAL' ? 'INTERVIEWING' : status;
+      assert.deepEqual(placed.map((lane) => lane.key), [expected]);
+    }
+  }
 
   assert.equal(getAdjacentStatus('INTERVIEWING', 'next'), 'FINAL');
   assert.equal(getAdjacentStatus('FINAL', 'prev'), 'INTERVIEWING');
