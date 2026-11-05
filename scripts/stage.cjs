@@ -35,6 +35,8 @@ function runtimeFiles(platform, arch = process.arch) {
 }
 
 function stagedContent(relative) {
+  // runtimeFiles() builds paths with path.join, so Windows passes backslashes.
+  relative = relative.split(path.sep).join('/');
   if (relative === 'src/backend/google-oauth-client.json') {
     const source = process.env.JOB_TRACKER_GOOGLE_OAUTH_CLIENT_FILE;
     if (!source) return Buffer.from('{}\n');
