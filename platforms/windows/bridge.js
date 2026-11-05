@@ -18,7 +18,7 @@
 
   const ALLOWED_METHODS = Object.freeze([
     'getAiAgents', 'saveAiAgent', 'removeAiAgent', 'generateWithAiAgent', 'cancelAiAgentGeneration',
-    'getGoogleDriveStatus', 'beginGoogleDriveLogin', 'cancelGoogleDriveLogin', 'cancelGoogleDriveTransfer', 'prepareGoogleDriveBackup', 'configureGoogleDrive', 'disconnectGoogleDrive', 'uploadGoogleDriveBackup', 'listGoogleDriveBackups', 'previewGoogleDriveBackup', 'restoreGoogleDriveBackup',
+    'getGoogleDriveStatus', 'beginGoogleDriveLogin', 'cancelGoogleDriveLogin', 'cancelGoogleDriveTransfer', 'prepareGoogleDriveBackup', 'saveGoogleDriveSettings', 'deleteGoogleDriveBackup', 'prepareGoogleDrivePrune', 'pruneGoogleDriveBackups', 'disconnectGoogleDrive', 'uploadGoogleDriveBackup', 'listGoogleDriveBackups', 'previewGoogleDriveBackup', 'restoreGoogleDriveBackup',
     'getCopilotStatus', 'installCopilotPack', 'cancelCopilotPack', 'removeCopilotPack', 'configureCopilot', 'beginCopilotLogin', 'cancelCopilotLogin', 'signOutCopilot', 'getCopilotDetails', 'generateWithCopilot', 'cancelCopilotGeneration',
     'getAppSettings',
     'saveAppSettings',

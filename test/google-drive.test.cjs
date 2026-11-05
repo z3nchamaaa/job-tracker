@@ -17,7 +17,7 @@ function fixture(t, options = {}) {
   const storage = { isEncryptionAvailable: () => true,
     encryptString(value) { const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', key, iv); return Buffer.concat([iv,c.update(value),c.final(),c.getAuthTag()]); },
     decryptString(value) { const c = crypto.createDecipheriv('aes-256-gcm',key,value.subarray(0,12)); c.setAuthTag(value.subarray(-16)); return Buffer.concat([c.update(value.subarray(12,-16)),c.final()]).toString(); } };
-  const service = new GoogleDriveService({ dataDir: dir, safeStorage: storage, dbStore: db, profileStore: profile, openExternal: async () => {}, ...options });
+  const service = new GoogleDriveService({ dataDir: dir, safeStorage: storage, dbStore: db, profileStore: profile, openExternal: async () => {}, defaultClient: { clientId: CLIENT, clientSecret: 'synthetic-secret' }, ...options });
   t.after(() => { service.shutdown(); db.close(); fs.rmSync(dir, { recursive:true,force:true }); });
   const authorize = () => service.write({version:1,clientId:CLIENT,clientSecret:'synthetic-secret',accessToken:ACCESS,refreshToken:REFRESH,expiresAt:Date.now()+3600000});
   return { service, dir, storage, db, profile, authorize };
@@ -30,17 +30,17 @@ async function callback(url, values) {
 }
 test('Drive configuration and tokens are encrypted, never returned in status, and no network is used by status', (t) => {
   let calls=0; const {service,storage,authorize}=fixture(t,{fetch:async()=>{calls++;throw new Error('no network');}});
-  assert.equal(service.getStatus().configured,false);
-  service.configure({clientId:CLIENT,clientSecret:'synthetic-secret'}); authorize();
+  assert.equal(service.getStatus().configured,true); assert.equal(service.getStatus().connected,false); assert.equal(fs.existsSync(service.file),false);
+  authorize();
   const status=service.getStatus(); assert.equal(status.connected,true); assert.equal(calls,0);
   assert(!JSON.stringify(status).includes(ACCESS));assert(!JSON.stringify(status).includes(REFRESH));assert(!JSON.stringify(status).includes('synthetic-secret'));
   assert(!fs.readFileSync(service.file).includes(REFRESH));
   const before=fs.readFileSync(service.file); storage.encryptString=()=>{throw new Error('failure');};
-  assert.throws(()=>service.configure({clientId:'999-synthetic.apps.googleusercontent.com'})); assert.deepEqual(fs.readFileSync(service.file),before);
+  assert.throws(()=>service.write({...service.read(),accessToken:''})); assert.deepEqual(fs.readFileSync(service.file),before);
 });
 test('OAuth uses PKCE, state, loopback and only appdata; wrong state cannot consume the callback', async (t) => {
   let auth, fields; const {service}=fixture(t,{openExternal:async(url)=>{auth=new URL(url);},fetch:async(url,options)=>{assert.equal(url,'https://oauth2.googleapis.com/token');assert.equal(options.redirect,'error');fields=new URLSearchParams(options.body);return successToken();}});
-  service.configure({clientId:CLIENT}); await service.beginLogin();
+  await service.beginLogin();
   assert.equal(auth.origin,'https://accounts.google.com');assert.equal(auth.searchParams.get('scope'),SCOPE);assert.equal(auth.searchParams.get('code_challenge_method'),'S256');
   assert.equal((await callback(auth,{state:'wrong',code:'4/syntheticCode'})).status,400);assert.equal(service.getStatus().signingIn,true);
   const response=await callback(auth,{state:auth.searchParams.get('state'),code:'4/syntheticCode'}); assert.equal(response.status,200);
@@ -52,7 +52,6 @@ test('OAuth uses PKCE, state, loopback and only appdata; wrong state cannot cons
 test('Browser launch failure clears the pending Google login so it can be retried', async (t) => {
   let attempts = 0;
   const { service } = fixture(t, { openExternal: async () => { attempts++; throw new Error('synthetic launch failure'); } });
-  service.configure({ clientId: CLIENT });
   for (let i = 0; i < 2; i++) {
     await assert.rejects(service.beginLogin(), /Google認証画面を開けませんでした/);
     assert.equal(service.getStatus().signingIn, false);
@@ -64,19 +63,19 @@ test('Browser launch failure clears the pending Google login so it can be retrie
 test('cancelled authorization cannot save a late exchange response', async (t) => {
   let auth, release, started; const reached=new Promise(r=>{started=r;});
   const {service}=fixture(t,{openExternal:async(u)=>{auth=new URL(u);},fetch:async()=>{started();return new Promise(r=>{release=()=>r(successToken());});}});
-  service.configure({clientId:CLIENT});await service.beginLogin();
+  await service.beginLogin();
   await callback(auth,{state:auth.searchParams.get('state'),code:'4/synthetic'});await reached;
   const pending=service.login; service.cancelLogin();release();await pending.promise;
   assert.equal(service.getStatus().connected,false);
 });
 test('missing appdata grant is rejected and keeps previous credentials unchanged', async (t) => {
   let auth; const {service}=fixture(t,{openExternal:async(u)=>{auth=new URL(u);},fetch:async()=>Response.json({access_token:ACCESS,refresh_token:REFRESH,expires_in:3600,token_type:'Bearer',scope:'openid'})});
-  service.configure({clientId:CLIENT});await service.beginLogin();await callback(auth,{state:auth.searchParams.get('state'),code:'4/synthetic'});
+  await service.beginLogin();await callback(auth,{state:auth.searchParams.get('state'),code:'4/synthetic'});
   if(service.login)await service.login.promise;
   assert.equal(service.getStatus().connected,false);assert(service.getStatus().error);
 });
 test('upload requires explicit prepared preview, targets only appDataFolder, excludes credentials, and never overwrites', async (t) => {
-  let call; const {service,authorize}=fixture(t,{fetch:async(url,options)=>{call={url,options};return Response.json({id:'synthetic-file-id'});}});authorize();
+  let call; const {service,authorize}=fixture(t,{fetch:async(url,options={})=>{if(options.method!=='POST')return Response.json({files:[]});call={url,options};return Response.json({id:'synthetic-file-id'});}});authorize();
   await assert.rejects(service.uploadBackup({token:'wrong'}),/プレビュー/);assert.equal(call,undefined);
   const prepared=service.prepareBackup(); assert(prepared.counts); await service.uploadBackup({token:prepared.token});
   assert.equal(call.options.method,'POST');assert(call.url.startsWith('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'));
@@ -110,36 +109,116 @@ test('failed revocation preserves connection and local-only disconnect sends no 
   await service.disconnect({localOnly:true});assert.equal(calls,1);assert.equal(service.getStatus().connected,false);
 });
 
-test('bundled Desktop client allows first login without writing configuration and preserves custom accounts', async (t) => {
+test('bundled Desktop client allows first login without configuration; tokens from other clients require reconnecting', async (t) => {
   const defaultClient = { clientId: '987654321-bundled.apps.googleusercontent.com', clientSecret: 'synthetic-bundled-secret' };
-  let auth;
-  const { service, authorize } = fixture(t, { defaultClient, openExternal: async (url) => { auth = new URL(url); }, fetch: async () => successToken() });
+  let auth, calls = 0;
+  const { service, authorize } = fixture(t, { defaultClient, openExternal: async (url) => { auth = new URL(url); }, fetch: async () => { calls++; return successToken(); } });
   assert.equal(service.getStatus().configured, true);
-  assert.equal(service.getStatus().configurationSource, 'bundled');
   assert.equal(fs.existsSync(service.file), false);
   assert(!JSON.stringify(service.getStatus()).includes(defaultClient.clientSecret));
+  assert.equal(typeof service.configure, 'undefined');
+  authorize(); // legacy token issued to a user-supplied client
+  assert.equal(service.getStatus().connected, false);
+  assert.equal(service.getStatus().needsReconnect, true);
+  await assert.rejects(service.listBackups({}), /再接続/); assert.equal(calls, 0);
   await service.beginLogin();
   assert.equal(auth.searchParams.get('client_id'), defaultClient.clientId);
   await callback(auth, { state: auth.searchParams.get('state'), code: '4/synthetic' });
   if (service.login) await service.login.promise;
   assert.equal(service.getStatus().connected, true);
-  await service.disconnect({ localOnly: true });
-  assert.equal(service.getStatus().configured, true);
-  authorize();
-  assert.equal(service.getStatus().configurationSource, 'custom');
-  assert.equal(service.getStatus().connected, true);
-  assert.throws(() => service.configure({ useBundled: true, clientId: CLIENT }));
-  service.configure({ useBundled: true });
-  assert.equal(service.getStatus().connected, false);
-  assert.equal(service.getStatus().configurationSource, 'bundled');
-  assert.equal(service.read().refreshToken, '');
+  assert.equal(service.read().clientId, defaultClient.clientId);
 });
 
-test('reset to unavailable bundled client is rejected without changing an existing login', (t) => {
-  const { service, authorize } = fixture(t, { defaultClient: null }); authorize();
-  const before = fs.readFileSync(service.file);
-  assert.throws(() => service.configure({ useBundled: true }));
-  assert.deepEqual(fs.readFileSync(service.file), before);
+test('builds without an embedded client cannot start Google login', async (t) => {
+  let opened = false;
+  const { service } = fixture(t, { defaultClient: null, openExternal: async () => { opened = true; } });
+  assert.equal(service.getStatus().configured, false);
+  await assert.rejects(service.beginLogin(), /接続設定が含まれていない/);
+  assert.equal(opened, false);
+});
+
+test('local quotas cap request bursts, daily uploads, upload interval and login attempts', async (t) => {
+  let now = Date.parse('2026-11-05T00:00:00Z'), uploads = 0;
+  const { service, authorize } = fixture(t, { now: () => now, limits: { requestsPerMinute: 4, uploadsPerDay: 2, uploadIntervalMs: 60000, loginsPerHour: 2 },
+    fetch: async (url, options) => {
+      if (options?.method === 'POST') { uploads++; return Response.json({ id: 'synthetic-upload-' + uploads }); }
+      return Response.json({ files: [] });
+    } });
+  authorize(); service.write({ ...service.read(), expiresAt: now + 7 * 86400000 });
+  await service.uploadBackup({ token: service.prepareBackup().token });
+  assert.throws(() => service.prepareBackup(), /秒待って/);
+  assert.match(service.getStatus().usage.uploadBlockedReason, /秒待って/);
+  now += 61000;
+  await service.uploadBackup({ token: service.prepareBackup().token });
+  now += 61000;
+  assert.throws(() => service.prepareBackup(), /1日2回/);
+  assert.equal(uploads, 2);
+  for (let i = 0; i < 4; i++) await service.listBackups({});
+  await assert.rejects(service.listBackups({}), /集中/);
+  now = Date.parse('2026-11-06T00:00:00Z');
+  await service.uploadBackup({ token: service.prepareBackup().token });
+  assert.equal(uploads, 3);
+  // Usage survives a restart because it is persisted in the data directory.
+  const reopened = new GoogleDriveService({ dataDir: path.dirname(service.file), safeStorage: service.storage, dbStore: service.db, profileStore: service.profile, openExternal: async () => {}, defaultClient: service.client, now: () => now, limits: { uploadsPerDay: 1 } });
+  assert.throws(() => reopened.prepareBackup(), /1日1回/);
+  await service.disconnect({ localOnly: true });
+  await service.beginLogin(); service.cancelLogin();
+  await service.beginLogin(); service.cancelLogin();
+  await assert.rejects(service.beginLogin(), /しばらく待って/);
+});
+
+test('upload refuses when the stored backup cap is reached unless automatic pruning is enabled', async (t) => {
+  const stored = Array.from({ length: 3 }, (_, i) => ({ id: 'old' + i, name: 'job-tracker-backup-' + i + '.json', size: '10', createdTime: `2026-11-0${3 - i}T00:00:00Z` }));
+  const calls = [];
+  const { service, authorize } = fixture(t, { limits: { maxStored: 3 }, fetch: async (url, options = {}) => {
+    calls.push({ url, method: options.method || 'GET' });
+    if (options.method === 'POST') return Response.json({ id: 'fresh' });
+    if (options.method === 'DELETE') return new Response(null, { status: 204 });
+    return Response.json({ files: stored });
+  } });
+  authorize();
+  await assert.rejects(service.uploadBackup({ token: service.prepareBackup().token }), /3件まで/);
+  assert(!calls.some((c) => c.method === 'POST'));
+  assert.throws(() => service.saveSettings({ retentionCount: 4, autoPrune: true }), /1〜3件/);
+  service.saveSettings({ retentionCount: 2, autoPrune: true });
+  assert.deepEqual(service.getStatus().settings, { retentionCount: 2, autoPrune: true });
+  const result = await service.uploadBackup({ token: service.prepareBackup().token });
+  assert.equal(result.pruned, 2);
+  assert.deepEqual(calls.filter((c) => c.method === 'DELETE').map((c) => c.url.split('/').pop()), ['old1', 'old2']);
+});
+
+test('deleting a backup verifies it belongs to this app and handles empty Drive responses', async (t) => {
+  const calls = []; let application = 'jp.jobtracker.app';
+  const { service, authorize } = fixture(t, { fetch: async (url, options = {}) => {
+    calls.push({ url, method: options.method || 'GET' });
+    if (options.method === 'DELETE') return new Response(null, { status: 204 });
+    return Response.json({ id: 'synthetic', appProperties: { application } });
+  } });
+  authorize();
+  await assert.rejects(service.deleteBackup({ id: '../escape' }), /選択が不正/);
+  assert.deepEqual(await service.deleteBackup({ id: 'synthetic' }), { deleted: 1 });
+  assert.equal(calls.at(-1).method, 'DELETE'); assert.equal(calls.at(-1).url, 'https://www.googleapis.com/drive/v3/files/synthetic');
+  application = 'other-app';
+  await assert.rejects(service.deleteBackup({ id: 'synthetic' }), /このアプリのバックアップではない/);
+  assert.equal(calls.filter((c) => c.method === 'DELETE').length, 1);
+});
+
+test('pruning old backups is previewed first and deletes only the staged older files', async (t) => {
+  const stored = Array.from({ length: 5 }, (_, i) => ({ id: 'b' + i, name: 'job-tracker-backup-' + i + '.json', size: '10', createdTime: `2026-11-0${5 - i}T00:00:00Z` }));
+  const deleted = [];
+  const { service, authorize } = fixture(t, { fetch: async (url, options = {}) => {
+    if (options.method === 'DELETE') { deleted.push(url.split('/').pop()); return new Response(null, { status: 204 }); }
+    return Response.json({ files: stored });
+  } });
+  authorize();
+  await assert.rejects(service.preparePrune({ keep: 0 }), /1〜/);
+  const plan = await service.preparePrune({ keep: 2 });
+  assert.equal(plan.total, 5); assert.equal(plan.count, 3); assert.equal(plan.oldest, '2026-11-01T00:00:00Z');
+  assert.deepEqual(deleted, []);
+  await assert.rejects(service.pruneBackups({ token: 'wrong' }), /プレビュー/);
+  assert.deepEqual(await service.pruneBackups({ token: plan.token }), { deleted: 3 });
+  assert.deepEqual(deleted, ['b2', 'b3', 'b4']);
+  await assert.rejects(service.pruneBackups({ token: plan.token }), /プレビュー/);
 });
 
 test('staging extracts only Desktop application fields and never copies user tokens or URLs', (t) => {
