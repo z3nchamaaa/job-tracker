@@ -231,6 +231,13 @@ test('staging extracts only Desktop application fields and never copies user tok
   assert.deepEqual(JSON.parse(content('')), {});
   fs.writeFileSync(file, JSON.stringify({ installed: { client_id: CLIENT, client_secret: 'synthetic-only', token_uri: 'https://untrusted.invalid' }, refresh_token: REFRESH }));
   assert.deepEqual(JSON.parse(content(file)), { clientId: CLIENT, clientSecret: 'synthetic-only' });
+  // copyRuntime passes native separators (backslashes on Windows); the client must still be embedded.
+  const distDir = path.resolve(__dirname, '../dist');
+  fs.mkdirSync(distDir, { recursive: true });
+  const out = fs.mkdtempSync(path.join(distDir, 'test-stage-'));
+  t.after(() => fs.rmSync(out, { recursive: true, force: true }));
+  execFileSync(process.execPath, [stage, out, 'windows', 'x64'], { env: { ...process.env, JOB_TRACKER_GOOGLE_OAUTH_CLIENT_FILE: file }, stdio: 'ignore' });
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(out, 'src', 'backend', 'google-oauth-client.json'), 'utf8')), { clientId: CLIENT, clientSecret: 'synthetic-only' });
   fs.writeFileSync(file, JSON.stringify({ web: { client_id: CLIENT } }));
   assert.throws(() => content(file));
   fs.writeFileSync(file, '{"sensitive-malformed-input":');
