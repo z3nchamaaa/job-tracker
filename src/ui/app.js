@@ -3531,7 +3531,11 @@
             <button type="button" id="btn-export-backup" class="btn btn-primary">⬇ JSONバックアップをダウンロード</button>
           </div>
 
-          <div class="panel" id="google-drive-panel"></div>
+          <div class="panel">
+            <h3 class="panel-title" style="margin-bottom:6px">Google Driveバックアップ</h3>
+            <p class="settings-note">Google Driveへの接続・保存・復元・古いバックアップの削除は「アプリ設定」から行えます。</p>
+            <button type="button" id="btn-open-drive-settings" class="btn btn-sm btn-outlined">アプリ設定でGoogle Driveを開く</button>
+          </div>
 
           <!-- Section 2: Import with Preview & Rollback -->
           <div class="panel">
@@ -3575,7 +3579,9 @@
       `,
       triggerEl,
       (root) => {
-        window.JobTrackerDrive.mount(root, { invoke: ipcInvoke, escapeHtml, onRestore: async () => { await loadAllData(); const rollback = root.querySelector('#btn-rollback-import'); if (rollback) rollback.disabled = false; } });
+        root.querySelector('#btn-open-drive-settings')?.addEventListener('click', () => {
+          if (requestCloseModal()) openAppSettingsModal(document.getElementById('btn-app-settings'), { focusDrive: true });
+        });
         root.querySelector('#btn-export-backup')?.addEventListener('click', async () => {
           try {
             const res = await apiRequest('GET', '/api/data/backup');
@@ -3764,12 +3770,12 @@
     });
   }
 
-  async function openAppSettingsModal(trigger) {
+  async function openAppSettingsModal(trigger, { focusDrive = false } = {}) {
     try {
       const settings = await ipcInvoke('getAppSettings');
       const capability = settings.authentication;
       openModal(`
-        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
+        <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
           <div class="modal-header"><h2 id="app-settings-title" class="modal-title">アプリ設定</h2><button type="button" class="btn btn-ghost" data-modal-close aria-label="閉じる">✕</button></div>
           <form id="app-settings-form" class="settings-form">
             <div class="modal-body">
@@ -3792,10 +3798,17 @@
               ${capability.available ? '' : `<p class="settings-note" role="status">${escapeHtml(capability.reason)}</p>`}
               <p class="settings-note">初期設定はオフです。認証をキャンセルするとアプリは開きません。この機能はアプリを開く際のロックで、保存済みDBを暗号化するものではありません。</p>
               <p id="app-settings-message" role="status" aria-live="polite"></p>
+              <section class="panel settings-drive" id="google-drive-panel" aria-label="Google Driveバックアップ"></section>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-outlined" data-modal-close>キャンセル</button><button type="submit" class="btn btn-primary">保存</button></div>
           </form>
         </div>`, trigger, (root) => {
+        window.JobTrackerDrive.mount(root, { invoke: ipcInvoke, escapeHtml, onRestore: async () => { await loadAllData(); } });
+        if (focusDrive) {
+          const drive = root.querySelector('#google-drive-panel');
+          drive.scrollIntoView({ block: 'start' });
+          drive.querySelector('button:not([disabled])')?.focus();
+        }
         root.querySelector('#app-settings-form').addEventListener('submit', async (event) => {
           event.preventDefault();
           const form = event.currentTarget;
