@@ -34,7 +34,9 @@ async function launchPage(url, { width = 1280, height = 820, scale = 1 } = {}) {
       clearTimeout(timer);
       await Promise.race([exited, delay(1500)]);
     }
-    fs.rmSync(profile, { recursive: true, force: true });
+    // Chrome helper processes can still write to the profile briefly after the
+    // main process exits (seen as ENOTEMPTY on macOS CI), so retry the removal.
+    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   };
   try {
     const deadline = Date.now() + 12000;
