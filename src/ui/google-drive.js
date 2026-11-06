@@ -1,6 +1,81 @@
 (function () {
   'use strict';
   const RETENTION_CHOICES = [3, 5, 10, 20, 30];
+  const counts = (p) => `企業 ${Number(p.companies) || 0}社 ／ 選考 ${Number(p.steps) || 0}件 ／ 面接記録 ${Number(p.interviews) || 0}件 ／ 予定 ${Number(p.events) || 0}件`;
+  const when = (value) => (Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : '日時不明');
+  const confirmUpload = (p) => window.confirm(`次のバックアップをGoogle Driveへ送信しますか？\n${counts(p.counts)}\n約${Math.ceil(p.bytes / 1024)} KiB\n\n就活プロフィール・企業メモ・マイページID等を含む、暗号化されていないJSONです。認証トークンとパスワードは含みません。`);
+  const uploadMessage = (result) => {
+    if (result.pruneError) return `Driveへバックアップを保存しました。ただし古いバックアップの自動削除に失敗しました：${result.pruneError}`;
+    return result.pruned ? `Driveへバックアップを保存し、古いバックアップを${result.pruned}件削除しました。` : 'Driveへバックアップを保存しました。';
+  };
+  const restoreBanner = (escapeHtml, preview, heading) => `<div class="banner banner-info drive-restore"><strong>${heading}復元内容：${escapeHtml(counts(preview.counts))}</strong><p>就活プロフィール：${preview.hasCareerProfile ? '復元対象' : '既存を維持'}。実行前の状態はローカルに退避し、既存の取り消し機能で戻せます。</p><label>復元方法 <select class="select" data-drive-restore-mode data-no-dirty><option value="merge">既存データへ追加</option><option value="replace">既存データを置換</option></select></label><button type="button" class="btn btn-primary" data-drive-restore>この内容で復元する</button></div>`;
+  const RESTORED = 'バックアップを復元しました。必要なら「データ管理」の「直前のインポートをロールバック」で取り消せます。';
+
+  // Compact panel for the data management modal: save now, or restore the newest backup.
+  // Connecting, browsing, deleting and retention stay in app settings.
+  function mountQuick(root, { invoke, escapeHtml, onRestore }) {
+    const panel = root.querySelector('#drive-quick-panel');
+    let status = {}, busy = false, restoreToken = '';
+    panel.innerHTML = `
+      <h3 class="panel-title" style="margin-bottom:6px">Google Driveバックアップ</h3>
+      <p class="settings-note">Google Driveへの接続・解除、一覧からの復元、古いバックアップの削除は「アプリ設定」のGoogle Drive項目から行えます。</p>
+      <p id="drive-quick-status" class="settings-note"></p>
+      <div class="drive-actions">
+        <button type="button" class="btn btn-sm btn-primary" id="drive-quick-upload" disabled>内容を確認してDriveへ保存</button>
+        <button type="button" class="btn btn-sm btn-outlined" id="drive-quick-latest" disabled>最新のバックアップから復元</button>
+      </div>
+      <p id="drive-quick-message" role="status" aria-live="polite"></p>
+      <div id="drive-quick-preview"></div>`;
+    const message = panel.querySelector('#drive-quick-message'), area = panel.querySelector('#drive-quick-preview');
+    const alive = () => panel.isConnected;
+    const render = () => {
+      if (!alive()) return;
+      const ready = status.connected && !busy && !status.busy && !status.signingIn;
+      panel.querySelector('#drive-quick-status').textContent = !status.configured
+        ? 'このビルドにはGoogle接続設定が含まれていないため、Driveバックアップは利用できません。'
+        : status.connected ? 'Google Driveに接続済みです。'
+        : 'Google Driveに接続していません。「アプリ設定」のGoogle Drive項目から接続してください。';
+      panel.querySelector('#drive-quick-upload').disabled = !ready;
+      panel.querySelector('#drive-quick-latest').disabled = !ready;
+      const restore = area.querySelector('[data-drive-restore]');
+      if (restore) restore.disabled = !ready;
+    };
+    const run = async (action) => {
+      if (busy) return;
+      busy = true; message.textContent = '処理しています…'; render();
+      try { const text = await action(); if (alive()) message.textContent = text || ''; }
+      catch (e) { if (alive()) message.textContent = e.message; }
+      finally {
+        try { status = await invoke('getGoogleDriveStatus'); } catch {}
+        busy = false; render();
+      }
+    };
+    panel.querySelector('#drive-quick-upload').addEventListener('click', () => run(async () => {
+      const p = await invoke('prepareGoogleDriveBackup');
+      if (!confirmUpload(p)) return 'Driveへの保存を中止しました。';
+      return uploadMessage(await invoke('uploadGoogleDriveBackup', { token: p.token }));
+    }));
+    panel.querySelector('#drive-quick-latest').addEventListener('click', () => run(async () => {
+      restoreToken = ''; area.replaceChildren();
+      const [latest] = (await invoke('listGoogleDriveBackups', {})).files;
+      if (!latest) return 'Driveにバックアップはありません。';
+      const result = await invoke('previewGoogleDriveBackup', { id: latest.id });
+      restoreToken = result.token;
+      area.innerHTML = restoreBanner(escapeHtml, result.preview, `最新（${escapeHtml(when(latest.createdTime))}）の`);
+      area.querySelector('[data-drive-restore]').addEventListener('click', () => {
+        if (!restoreToken || !window.confirm(`${when(latest.createdTime)} のバックアップをローカルへ復元しますか？ 選んだ復元方法と件数を確認してください。`)) return;
+        run(async () => {
+          await invoke('restoreGoogleDriveBackup', { token: restoreToken, mode: area.querySelector('[data-drive-restore-mode]').value });
+          restoreToken = ''; area.replaceChildren(); await onRestore(); return RESTORED;
+        });
+      });
+      return '最新のバックアップをプレビューしました。まだローカルデータは変更していません。';
+    }));
+    root.addEventListener('jt-modal-close', () => { invoke('cancelGoogleDriveTransfer').catch(() => {}); }, { once: true });
+    invoke('getGoogleDriveStatus').then((value) => { status = value; render(); }).catch((e) => { if (alive()) message.textContent = e.message; });
+    render();
+  }
+
   function mount(root, { invoke, escapeHtml, onRestore }) {
     const panel = root.querySelector('#google-drive-panel');
     let status = {}, busy = false, timer = null, restoreToken = '', pageToken = '', files = [], listed = false;
@@ -24,8 +99,6 @@
     const message = panel.querySelector('#drive-message'), controls = panel.querySelector('#drive-controls');
     const countSelect = panel.querySelector('#drive-retention-count'), autoPrune = panel.querySelector('#drive-auto-prune');
     const alive = () => panel.isConnected;
-    const counts = (p) => `企業 ${Number(p.companies) || 0}社 ／ 選考 ${Number(p.steps) || 0}件 ／ 面接記録 ${Number(p.interviews) || 0}件 ／ 予定 ${Number(p.events) || 0}件`;
-    const when = (value) => (Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : '日時不明');
     const resetResults = () => { files = []; pageToken = ''; listed = false; restoreToken = ''; renderFiles(); panel.querySelector('#drive-preview').replaceChildren(); };
     const render = () => {
       if (!alive()) return;
@@ -55,11 +128,11 @@
       controls.querySelector('#drive-cancel-transfer')?.addEventListener('click', () => invoke('cancelGoogleDriveTransfer').catch((e) => { message.textContent = e.message; }));
       controls.querySelector('#drive-upload')?.addEventListener('click', () => run(async () => {
         const p = await invoke('prepareGoogleDriveBackup');
-        if (!window.confirm(`次のバックアップをGoogle Driveへ送信しますか？\n${counts(p.counts)}\n約${Math.ceil(p.bytes / 1024)} KiB\n\n就活プロフィール・企業メモ・マイページID等を含む、暗号化されていないJSONです。認証トークンとパスワードは含みません。`)) return 'Driveへの保存を中止しました。';
+        if (!confirmUpload(p)) return 'Driveへの保存を中止しました。';
         const result = await invoke('uploadGoogleDriveBackup', { token: p.token });
         if (listed) await refreshFiles();
-        if (result.pruneError) return `Driveへバックアップを保存しました。ただし古いバックアップの自動削除に失敗しました：${result.pruneError}`;
-        return result.pruned ? `Driveへバックアップを保存し、古いバックアップを${result.pruned}件削除しました。` : 'Driveへバックアップを保存しました。一覧から確認できます。';
+        const text = uploadMessage(result);
+        return result.pruneError || result.pruned ? text : text + '一覧から確認できます。';
       }));
       controls.querySelector('#drive-list')?.addEventListener('click', () => loadFiles(false));
       for (const [id, localOnly] of [['drive-disconnect', false], ['drive-forget', true]]) {
@@ -107,10 +180,12 @@
         restoreToken = ''; const area = panel.querySelector('#drive-preview'); area.replaceChildren();
         const result = await invoke('previewGoogleDriveBackup', { id: button.dataset.drivePreview });
         restoreToken = result.token;
-        area.innerHTML = `<div class="banner banner-info drive-restore"><strong>復元内容：${escapeHtml(counts(result.preview.counts))}</strong><p>就活プロフィール：${result.preview.hasCareerProfile ? '復元対象' : '既存を維持'}。実行前の状態はローカルに退避し、既存の取り消し機能で戻せます。</p><label>復元方法 <select class="select" id="drive-restore-mode" data-no-dirty><option value="merge">既存データへ追加</option><option value="replace">既存データを置換</option></select></label><button type="button" class="btn btn-primary" id="drive-restore">この内容で復元する</button></div>`;
-        area.querySelector('#drive-restore').addEventListener('click', () => {
+        area.innerHTML = restoreBanner(escapeHtml, result.preview, '');
+        const restore = area.querySelector('[data-drive-restore]');
+        restore.id = 'drive-restore'; area.querySelector('[data-drive-restore-mode]').id = 'drive-restore-mode';
+        restore.addEventListener('click', () => {
           if (!restoreToken || !window.confirm('プレビューしたバックアップをローカルへ復元しますか？ 選んだ復元方法と件数を確認してください。')) return;
-          run(async () => { await invoke('restoreGoogleDriveBackup', { token: restoreToken, mode: area.querySelector('#drive-restore-mode').value }); restoreToken = ''; area.replaceChildren(); await onRestore(); return 'バックアップを復元しました。必要なら「データ管理」の「直前のインポートをロールバック」で取り消せます。'; });
+          run(async () => { await invoke('restoreGoogleDriveBackup', { token: restoreToken, mode: area.querySelector('#drive-restore-mode').value }); restoreToken = ''; area.replaceChildren(); await onRestore(); return RESTORED; });
         });
         return 'プレビューしました。まだローカルデータは変更していません。';
       })));
@@ -153,5 +228,5 @@
     invoke('getGoogleDriveStatus').then((value) => { status = value; if (alive()) { render(); poll(); } }).catch((e) => { if (alive()) message.textContent = e.message; });
     render(); renderFiles();
   }
-  window.JobTrackerDrive = Object.freeze({ mount });
+  window.JobTrackerDrive = Object.freeze({ mount, mountQuick });
 })();

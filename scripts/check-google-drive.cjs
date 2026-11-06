@@ -4,13 +4,13 @@ const { createAppServer } = require('../src/backend/server.cjs');
 const { launchPage } = require('./browser.cjs');
 const { SCOPE } = require('../src/backend/google-drive.cjs');
 (async () => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-drive-ui-')); let browser, uploaded = null, metadata = null, network = 0, authCalls = 0, deleted = false;
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'jt-drive-ui-')); let browser, uploaded = null, metadata = null, network = 0, authCalls = 0, deleted = false, uploads = 0;
   const key = crypto.randomBytes(32);
   const safeStorage = { isEncryptionAvailable: () => true,
     encryptString(value) { const iv=crypto.randomBytes(12), c=crypto.createCipheriv('aes-256-gcm',key,iv);return Buffer.concat([iv,c.update(value),c.final(),c.getAuthTag()]); },
     decryptString(value) { const c=crypto.createDecipheriv('aes-256-gcm',key,value.subarray(0,12));c.setAuthTag(value.subarray(-16));return Buffer.concat([c.update(value.subarray(12,-16)),c.final()]).toString(); } };
   const defaultClient = process.argv.includes('--without-default') ? null : { clientId: '987654321-bundled.apps.googleusercontent.com', clientSecret: 'synthetic-bundled-secret' };
-  const app = createAppServer({ dataDir: directory, allowDevBrowserSession: true, safeStorage, driveDefaultClient: defaultClient,
+  const app = createAppServer({ dataDir: directory, allowDevBrowserSession: true, safeStorage, driveDefaultClient: defaultClient, driveLimits: { uploadIntervalMs: 0 },
     openExternal: async (raw) => {
       const url=new URL(raw);assert.equal(url.origin,'https://accounts.google.com');authCalls++;
       const redirect=new URL(url.searchParams.get('redirect_uri'));redirect.searchParams.set('state',url.searchParams.get('state'));redirect.searchParams.set('code','4/synthetic-ui-code');
@@ -23,7 +23,7 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
       if (url.includes('/upload/')) {
         const text=options.body.toString(), boundary=options.headers['Content-Type'].split('boundary=')[1];
         const parts=text.split('--'+boundary);metadata=JSON.parse(parts[1].split('\r\n\r\n')[1].trim());uploaded=parts[2].split('\r\n\r\n')[1].replace(/\r\n$/,'');
-        assert(!uploaded.includes('synthetic-ui-refresh'));return Response.json({id:'synthetic-file'});
+        assert(!uploaded.includes('synthetic-ui-refresh'));uploads++;return Response.json({id:'synthetic-file'});
       }
       if (options?.method==='DELETE') { assert(url.endsWith('/synthetic-file')); deleted=true; return new Response(null,{status:204}); }
       if (url.includes('alt=media')) return new Response(uploaded);
@@ -38,10 +38,15 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     const complete = (text, control = 'drive-connect') => wait(`document.getElementById('drive-message').textContent.includes(${JSON.stringify(text)}) && !document.getElementById(${JSON.stringify(control)}).disabled`);
     await wait("Boolean(document.querySelector('[data-empty-add=prompt]'))");
     await evaluate("window.driveErrors=[];window.addEventListener('unhandledrejection',e=>window.driveErrors.push(String(e.reason)))");
-    // Drive moved from data management to app settings; the old screen links there.
-    await click('btn-data-manage');await wait("Boolean(document.getElementById('btn-open-drive-settings'))");
-    assert.equal(await evaluate("Boolean(document.getElementById('drive-connect'))"),false);
-    await click('btn-open-drive-settings');await wait("Boolean(document.getElementById('app-settings-form')) && Boolean(document.getElementById('drive-connect'))");
+    const closeModal = (id) => evaluate("document.querySelector('[data-modal-close]').click()").then(() => wait(`!document.getElementById(${JSON.stringify(id)})`));
+    const openSettings = async () => { await click('btn-app-settings'); await wait("Boolean(document.getElementById('app-settings-form')) && Boolean(document.getElementById('drive-connect'))"); };
+    const openDataQuick = async (ready) => { await click('btn-data-manage'); await wait(`Boolean(document.getElementById('drive-quick-upload')) && document.getElementById('drive-quick-status').textContent.includes(${JSON.stringify(ready)})`); };
+    // Data management offers save + restore-latest only; connecting and the full list live in app settings, with no link button.
+    await openDataQuick(defaultClient ? '接続していません' : '利用できません');
+    assert.equal(await evaluate("Boolean(document.getElementById('btn-open-drive-settings')) || Boolean(document.getElementById('drive-connect'))"),false);
+    assert(await evaluate("document.getElementById('drive-quick-upload').disabled && document.getElementById('drive-quick-latest').disabled"));
+    await closeModal('drive-quick-upload');
+    await openSettings();
     assert.equal(network,0);assert.equal(authCalls,0);
     assert.equal(await evaluate("Boolean(document.getElementById('drive-client-id')) || Boolean(document.getElementById('drive-config-form'))"),false);
     assert.equal(await evaluate("document.getElementById('drive-connect').disabled"), !defaultClient);
@@ -49,7 +54,7 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
       await wait("document.getElementById('drive-status').textContent.includes('利用できません')");
       assert(await evaluate("document.getElementById('drive-prune').disabled && document.getElementById('drive-retention-count').disabled"));
       assert.equal(network,0);assert.deepEqual(await evaluate('window.driveErrors'),[]);
-      console.log('PASS: build without embedded client shows Drive as unavailable in settings and sends nothing.');
+      console.log('PASS: build without embedded client shows Drive as unavailable in settings and data management and sends nothing.');
       return;
     }
     await click('drive-connect');await wait("!document.getElementById('drive-upload').disabled");assert.equal(authCalls,1);
@@ -62,6 +67,21 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     // Retention settings save immediately and do not mark the settings form dirty.
     await evaluate("const s=document.getElementById('drive-retention-count');s.value='5';s.dispatchEvent(new Event('change',{bubbles:true}))");await complete('最新5件', 'drive-list');
     assert.equal(JSON.parse(fs.readFileSync(path.join(directory,'auth','google-drive-state.json'),'utf8')).retentionCount,5);
+    // Data management: save now and restore the newest backup with a preview first.
+    await evaluate('window.confirm=()=>true');await closeModal('app-settings-form');
+    await openDataQuick('接続済み');
+    const quick = (text) => wait(`document.getElementById('drive-quick-message').textContent.includes(${JSON.stringify(text)}) && !document.getElementById('drive-quick-upload').disabled`);
+    await evaluate('window.confirm=()=>false');await click('drive-quick-upload');await quick('中止しました');assert.equal(uploads,1);
+    await evaluate('window.confirm=()=>true');await click('drive-quick-upload');await quick('保存しました');assert.equal(uploads,2);
+    const beforeQuick=JSON.stringify(app.dbStore.exportBackup(app.profileStore.getProfile()).data);
+    await click('drive-quick-latest');await quick('最新のバックアップをプレビュー');
+    assert.equal(JSON.stringify(app.dbStore.exportBackup(app.profileStore.getProfile()).data),beforeQuick);
+    await evaluate("document.querySelector('#drive-quick-preview [data-drive-restore-mode]').value='replace'");
+    await evaluate("document.querySelector('#drive-quick-preview [data-drive-restore]').click()");await quick('復元しました');
+    assert.equal(await evaluate("document.getElementById('btn-rollback-import').disabled"),false);
+    assert.equal(await evaluate("Boolean(document.querySelector('#drive-quick-preview [data-drive-restore]'))"),false);
+    await closeModal('drive-quick-upload');
+    await openSettings();await click('drive-list');await complete('一覧を取得しました', 'drive-list');
     for (const [width,height] of [[360,480],[390,844],[768,700]]) {
       await browser.call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
       assert(await evaluate("(()=>{const r=document.querySelector('.modal-dialog').getBoundingClientRect(),b=document.querySelector('.modal-body');return r.left>=0&&r.right<=innerWidth+1&&b.scrollWidth<=b.clientWidth+1})()"));
@@ -76,6 +96,6 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     await click('drive-disconnect');await complete('解除しました');assert(await evaluate("document.getElementById('drive-upload').disabled"));
     assert.equal(await evaluate("document.getElementById('drive-connect').disabled"), false);
     assert.deepEqual(await evaluate('window.driveErrors'),[]);
-    console.log('PASS: Drive lives in app settings; no automatic network; embedded client mock OAuth/PKCE; cancelled upload sends nothing; upload/list/preview/restore/delete/prune/retention/disconnect; three narrow sizes. No real Google account or cloud writes.');
+    console.log('PASS: Drive lives in app settings; data management can save and restore the newest backup (preview first) and has no settings link button; no automatic network; embedded client mock OAuth/PKCE; cancelled upload sends nothing; upload/list/preview/restore/delete/prune/retention/disconnect; three narrow sizes. No real Google account or cloud writes.');
   } finally { await browser?.close();await app.stop();fs.rmSync(directory,{recursive:true,force:true}); }
 })().catch(e=>{console.error(e);process.exitCode=1;});
