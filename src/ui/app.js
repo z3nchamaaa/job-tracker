@@ -3531,11 +3531,7 @@
             <button type="button" id="btn-export-backup" class="btn btn-primary">⬇ JSONバックアップをダウンロード</button>
           </div>
 
-          <div class="panel">
-            <h3 class="panel-title" style="margin-bottom:6px">Google Driveバックアップ</h3>
-            <p class="settings-note">Google Driveへの接続・保存・復元・古いバックアップの削除は「アプリ設定」から行えます。</p>
-            <button type="button" id="btn-open-drive-settings" class="btn btn-sm btn-outlined">アプリ設定でGoogle Driveを開く</button>
-          </div>
+          <section class="panel" id="drive-quick-panel" aria-label="Google Driveバックアップ"></section>
 
           <!-- Section 2: Import with Preview & Rollback -->
           <div class="panel">
@@ -3579,8 +3575,14 @@
       `,
       triggerEl,
       (root) => {
-        root.querySelector('#btn-open-drive-settings')?.addEventListener('click', () => {
-          if (requestCloseModal()) openAppSettingsModal(document.getElementById('btn-app-settings'), { focusDrive: true });
+        window.JobTrackerDrive.mountQuick(root, {
+          invoke: ipcInvoke,
+          escapeHtml,
+          onRestore: async () => {
+            const rollback = root.querySelector('#btn-rollback-import');
+            if (rollback) rollback.disabled = false;
+            await loadAllData();
+          },
         });
         root.querySelector('#btn-export-backup')?.addEventListener('click', async () => {
           try {
@@ -3770,7 +3772,7 @@
     });
   }
 
-  async function openAppSettingsModal(trigger, { focusDrive = false } = {}) {
+  async function openAppSettingsModal(trigger) {
     try {
       const settings = await ipcInvoke('getAppSettings');
       const capability = settings.authentication;
@@ -3804,11 +3806,6 @@
           </form>
         </div>`, trigger, (root) => {
         window.JobTrackerDrive.mount(root, { invoke: ipcInvoke, escapeHtml, onRestore: async () => { await loadAllData(); } });
-        if (focusDrive) {
-          const drive = root.querySelector('#google-drive-panel');
-          drive.scrollIntoView({ block: 'start' });
-          drive.querySelector('button:not([disabled])')?.focus();
-        }
         root.querySelector('#app-settings-form').addEventListener('submit', async (event) => {
           event.preventDefault();
           const form = event.currentTarget;
