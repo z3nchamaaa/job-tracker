@@ -24,7 +24,10 @@ const { launchPage } = require('./browser.cjs');
       await wait(`Boolean(document.querySelector(${JSON.stringify(selector)}))`);
       await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
     };
-    const openExisting = () => click(`[data-open-detail="${existing.id}"]`);
+    const openExisting = async () => {
+      await click(`[data-open-detail="${existing.id}"]`);
+      await wait("Boolean(document.querySelector('.company-detail-dialog')) && Boolean(document.getElementById('cd-quick-early'))");
+    };
     const closeDetail = async () => {
       await click('.company-detail-dialog [data-modal-close]');
       await wait("!document.getElementById('cd-modal-title')");
