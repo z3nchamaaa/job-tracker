@@ -18,7 +18,7 @@
     <FrameworkReference Update="Microsoft.NETCore.App;Microsoft.WindowsDesktop.App.WindowsForms"
                         RuntimeFrameworkVersion="$(MinimumDesktopRuntimeVersion)" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="[1.0.4258.31]" />
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="[10.0.13]" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="[11.0.0]" />
   </ItemGroup>
   <Target Name="RemoveUnusedWebViewWpfReference" BeforeTargets="ResolveAssemblyReferences">
     <ItemGroup>
