@@ -570,7 +570,8 @@ test('Real UI DOM & Browser E2E: onboarding skip/edit, narrow modal prompt copy 
         await waitFor(() => document.getElementById('modal-root').classList.contains('is-hidden'));
 
         // 3. Open AI / Prompt modal in narrow/low-height viewport (360x480)
-        document.getElementById('btn-add-prompt').click();
+        document.getElementById('btn-add-company').click();
+        document.getElementById('modal-switch-prompt').click();
         const nameInput = await waitFor(() => document.getElementById('pa-company-name'));
         const copyTopBtn = document.getElementById('btn-copy-prompt');
         const copyFooterBtn = document.getElementById('btn-footer-copy-prompt');
@@ -690,7 +691,8 @@ test('Real UI DOM & Browser E2E: onboarding skip/edit, narrow modal prompt copy 
           return origFetch(url, opts);
         };
 
-        document.getElementById('btn-add-manual').click();
+        document.getElementById('btn-add-company').click();
+        document.getElementById('modal-switch-manual').click();
         const mcName = await waitFor(() => document.getElementById('ma-name'));
         mcName.value = '株式会社リトライ検証';
         mcName.dispatchEvent(new Event('input', { bubbles: true }));
@@ -737,7 +739,12 @@ test('Real UI DOM & Browser E2E: onboarding skip/edit, narrow modal prompt copy 
         await waitFor(() => document.getElementById('update-message').textContent.includes('開きました'));
 
         document.querySelector('[data-modal-close]').click();
-        document.getElementById('btn-data-manage').click();
+        const openDataManagement = async () => {
+          document.getElementById('btn-app-settings').click();
+          (await waitFor(() => document.getElementById('modal-switch-data'))).click();
+          return waitFor(() => document.getElementById('dm-import-file'));
+        };
+        await openDataManagement();
         const importInput = await waitFor(() => document.getElementById('dm-import-file'));
         const transfer = new DataTransfer();
         const bytes = Uint8Array.from(atob(${JSON.stringify(selectedDbBase64)}), (ch) => ch.charCodeAt(0));
@@ -762,10 +769,9 @@ test('Real UI DOM & Browser E2E: onboarding skip/edit, narrow modal prompt copy 
         window.confirm = () => { throw new Error('Import file selection must not be an unsaved edit'); };
         document.querySelector('.modal-header [data-modal-close]').click();
         await waitFor(() => document.getElementById('modal-root').classList.contains('is-hidden'));
-        if (document.activeElement.id !== 'btn-data-manage') throw new Error('Focus not restored after import modal close');
+        if (document.activeElement.id !== 'btn-app-settings') throw new Error('Focus not restored after import modal close');
 
-        document.getElementById('btn-data-manage').click();
-        const selectedAgain = document.getElementById('dm-import-file');
+        const selectedAgain = await openDataManagement();
         selectedAgain.files = transfer.files;
         selectedAgain.dispatchEvent(new Event('input', { bubbles: true }));
         selectedAgain.dispatchEvent(new Event('change', { bubbles: true }));
@@ -780,7 +786,7 @@ test('Real UI DOM & Browser E2E: onboarding skip/edit, narrow modal prompt copy 
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
         await waitFor(() => document.getElementById('modal-root').classList.contains('is-hidden'));
 
-        document.getElementById('btn-data-manage').click();
+        await openDataManagement();
         document.getElementById('btn-rollback-import').click();
         await waitFor(() => document.getElementById('toast-container').textContent.includes('ロールバックしました'));
         document.querySelector('.modal-footer [data-modal-close]').click();

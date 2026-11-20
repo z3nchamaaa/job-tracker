@@ -86,7 +86,8 @@ test('Agent registration and ChatGPT consolidation UI test', async (t) => {
         await waitFor(() => document.querySelectorAll('.metric-card').length === 5);
 
         // 1. Open AI / Prompt Add modal
-        document.getElementById('btn-add-prompt').click();
+        document.getElementById('btn-add-company').click();
+        document.getElementById('modal-switch-prompt').click();
         await waitFor(() => document.getElementById('pa-company-name'));
 
         // Verify prompt modal has 3 panels (Company Name/Prompt, Registered Agent generation, Paste JSON)

@@ -31,20 +31,16 @@
         </div>
 
         <div class="header-actions" role="toolbar" aria-label="主要アクション">
-          <button type="button" id="btn-add-manual" class="btn btn-primary">
+          <button type="button" id="btn-add-company" class="btn btn-primary">
             <span class="btn-icon" aria-hidden="true">＋</span>
-            <span>企業を手動追加</span>
-          </button>
-          <button type="button" id="btn-add-prompt" class="btn btn-tonal">
-            <span class="btn-icon" aria-hidden="true">✦</span>
-            <span>AI / プロンプトで追加</span>
+            <span>企業を追加</span>
           </button>
           <button type="button" id="btn-career-profile" class="btn btn-outlined">
             <span>就活プロフィール</span>
             <span id="profile-status-dot" class="status-pill" aria-label="プロフィール設定状態">未設定</span>
           </button>
-          <button type="button" id="btn-data-manage" class="btn btn-outlined">
-            <span>データ管理・移行</span>
+          <button type="button" id="btn-share" class="btn btn-outlined">
+            <span>共有</span>
           </button>
           <button type="button" id="btn-app-settings" class="btn btn-outlined">設定</button>
         </div>
@@ -93,9 +89,11 @@
   <script src="/shared/calendar.cjs"></script>
   <script src="/shared/event-input.cjs"></script>
   <script src="/shared/metrics.cjs"></script>
+  <script src="/shared/share.cjs"></script>
 
   <!-- Main Application Script -->
   <script src="/google-drive.js"></script>
+  <script src="/share.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
