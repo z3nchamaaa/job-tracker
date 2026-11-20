@@ -1374,3 +1374,50 @@ html.is-zoom-200 .code-box {
 .drive-backup-list li > span { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
 .drive-backup-list small { display: block; }
 .drive-restore { flex-direction: column; align-items: stretch; gap: 8px; }
+
+/* Share modal */
+.share-fieldset { border: 0; margin: 0 0 12px; padding: 0; min-width: 0; }
+.share-fieldset legend { margin-bottom: 6px; }
+.share-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.share-level { position: relative; display: flex; cursor: pointer; min-width: 0; }
+.share-level input { position: absolute; opacity: 0; pointer-events: none; }
+.share-level-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--radius-sm);
+  background: var(--m3-surface-container-low);
+}
+.share-level-title { font-weight: 700; font-size: 0.88rem; color: var(--m3-on-surface); }
+.share-level-desc { font-size: 0.74rem; color: var(--m3-on-surface-variant); }
+.share-level input:checked + .share-level-body {
+  border-color: var(--m3-primary);
+  background: var(--m3-primary-container);
+}
+.share-level input:focus-visible + .share-level-body { outline: 2px solid var(--m3-primary); outline-offset: 2px; }
+.share-options { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 12px; }
+.share-options .checkbox-row[hidden] { display: none; }
+.share-preview { min-height: 220px; font-family: inherit; line-height: 1.6; white-space: pre; overflow: auto; }
+.share-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.share-lead { margin: 0 0 10px; }
+.share-list-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.share-list-tools { display: inline-flex; gap: 4px; }
+.share-company-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px 10px;
+  margin-bottom: 12px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--radius-sm);
+  background: var(--m3-surface-container-lowest);
+}
+.share-company-row { flex-wrap: wrap; padding: 4px 0; font-weight: 500; }
+.share-company-name { font-weight: 700; overflow-wrap: anywhere; }
+.share-import-summary { flex-direction: column; align-items: stretch; margin: 12px 0 8px; }
+@media (max-width: 720px) { .share-levels { grid-template-columns: minmax(0, 1fr); } }

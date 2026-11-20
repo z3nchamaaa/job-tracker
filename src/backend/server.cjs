@@ -28,6 +28,7 @@ const { createExternalBrowser } = require('./external-browser.cjs');
 
 const MAX_JSON_BODY_BYTES = 60 * 1024 * 1024; // 60 MiB (allows up to 50MiB base64 SQLite import)
 const DEFAULT_BODY_LIMIT = 512 * 1024; // 512 KiB for normal API requests
+const MAX_SHARE_BODY_BYTES = 8 * 1024 * 1024; // 8 MiB for shared company data
 
 const CSP_HEADER = [
   "default-src 'self'",
@@ -348,6 +349,9 @@ function createAppServer(options = {}) {
       if (method === "GET" && pathname === "/google-drive.js") {
         serveStaticFile(res, path.join(uiDir, "google-drive.js"), "application/javascript; charset=utf-8"); return;
       }
+      if (method === "GET" && pathname === "/share.js") {
+        serveStaticFile(res, path.join(uiDir, "share.js"), "application/javascript; charset=utf-8"); return;
+      }
       if (method === "GET" && pathname === "/app.js") {
         serveStaticFile(res, path.join(uiDir, "app.js"), "application/javascript; charset=utf-8");
         return;
@@ -488,6 +492,17 @@ function createAppServer(options = {}) {
 
         if (pathname === "/api/data/import/rollback" && method === "POST") {
           const result = dbStore.rollbackLastImport();
+          sendJson(res, 200, { success: true, ...result });
+          return;
+        }
+
+        if (pathname === "/api/share/companies/import" && method === "POST") {
+          const body = await readJsonBody(req, MAX_SHARE_BODY_BYTES);
+          if (!body || typeof body !== "object" || typeof body.payload !== "string") {
+            sendJson(res, 400, { error: "共有データを貼り付けるか、ファイルを選んでください。" });
+            return;
+          }
+          const result = dbStore.importSharedCompanies(body.payload, body.selected);
           sendJson(res, 200, { success: true, ...result });
           return;
         }

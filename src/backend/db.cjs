@@ -17,6 +17,7 @@ const {
 const { isCompanyPriority } = require("../shared/company-priority.cjs");
 const { validateSafeHttpUrl } = require("../shared/company-draft.cjs");
 const { eventInput, EventInputError } = require("../shared/event-input.cjs");
+const { parseCompanyShare, ShareFormatError } = require("../shared/share.cjs");
 const {
   CareerProfileStore,
   DEFAULT_CAREER_PROFILE,
@@ -380,12 +381,24 @@ class DatabaseStore {
 
   _inTransaction(fn) {
     this._requireHealthy();
+    // 外側のトランザクション内から呼ばれたときは、その一部として実行する
+    if (this.transactionDepth > 0) {
+      this.transactionDepth += 1;
+      try {
+        return fn();
+      } finally {
+        this.transactionDepth -= 1;
+      }
+    }
     this.db.exec("BEGIN IMMEDIATE;");
+    this.transactionDepth = 1;
     try {
       const result = fn();
+      this.transactionDepth = 0;
       this.db.exec("COMMIT;");
       return result;
     } catch (err) {
+      this.transactionDepth = 0;
       try {
         this.db.exec("ROLLBACK;");
       } catch {}
@@ -1148,6 +1161,69 @@ class DatabaseStore {
     if (!existing) return false;
     this.db.prepare("DELETE FROM ScheduleEvent WHERE id = ?").run(id);
     return true;
+  }
+
+  /**
+   * 友人から受け取った企業データを新しい企業として追加する。
+   * 選考状況は自分のものではないため、すべて「検討」・志望度3・ステップ未対応で登録する。
+   * selectedIndexes を省略すると全件を取り込む。途中で失敗した場合は何も追加しない。
+   */
+  importSharedCompanies(input, selectedIndexes = undefined) {
+    this._requireHealthy();
+    let parsed;
+    try {
+      parsed = parseCompanyShare(input);
+    } catch (err) {
+      if (err instanceof ShareFormatError) throw new DatabaseValidationError(err.message);
+      throw err;
+    }
+
+    let indexes = parsed.companies.map((_, i) => i);
+    if (selectedIndexes !== undefined) {
+      if (
+        !Array.isArray(selectedIndexes) ||
+        selectedIndexes.some((i) => !Number.isInteger(i) || i < 0 || i >= parsed.companies.length)
+      ) {
+        throw new DatabaseValidationError("取り込む企業の指定が正しくありません。");
+      }
+      indexes = [...new Set(selectedIndexes)].sort((a, b) => a - b);
+    }
+    if (indexes.length === 0) {
+      throw new DatabaseValidationError("取り込む企業を1社以上選んでください。");
+    }
+
+    return this._inTransaction(() => {
+      const created = [];
+      let events = 0;
+      for (const idx of indexes) {
+        const { events: sharedEvents, steps, ...fields } = parsed.companies[idx];
+        const company = this.createCompany({
+          ...fields,
+          status: "INTERESTED",
+          priority: 3,
+          steps: steps.map((s) => ({ ...s, status: "PENDING" })),
+        });
+        for (const ev of sharedEvents) {
+          try {
+            this.createEvent({
+              companyId: company.id,
+              title: ev.title,
+              eventType: ev.eventType,
+              startAt: ev.startAt,
+              endAt: ev.endAt,
+              allDay: ev.allDay,
+              location: ev.location,
+            });
+          } catch (err) {
+            if (err instanceof EventInputError) throw new DatabaseValidationError(`${company.name}の予定: ${err.message}`);
+            throw err;
+          }
+          events += 1;
+        }
+        created.push({ id: company.id, name: company.name });
+      }
+      return { companies: created, counts: { companies: created.length, events } };
+    });
   }
 
   /**
