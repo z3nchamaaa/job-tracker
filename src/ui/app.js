@@ -1425,12 +1425,64 @@
       onMount(root);
     }
 
+    // 切り替えタブより本文の入力欄を優先してフォーカスする
+    const focusSelector = 'input:not([type="hidden"]), select, textarea, button:not([data-modal-close])';
     const firstFocusable =
-      root.querySelector('input:not([type="hidden"]), select, textarea, button:not([data-modal-close])') ||
+      root.querySelector('.modal-body')?.querySelector(focusSelector) ||
+      root.querySelector(focusSelector) ||
       root.querySelector('button');
     if (firstFocusable) {
       firstFocusable.focus();
     }
+  }
+
+  // 「企業を追加」と「設定」は、関連する画面をモーダル上部のタブで切り替える
+  const MODAL_GROUPS = {
+    add: {
+      label: '追加方法',
+      tabs: [
+        { key: 'manual', label: '手動で入力', open: (trigger) => openManualAddModal(trigger) },
+        { key: 'prompt', label: 'AI / プロンプトで追加', open: (trigger) => openPromptAddModal(trigger) },
+      ],
+    },
+    settings: {
+      label: '設定の種類',
+      tabs: [
+        { key: 'app', label: 'アプリ設定', open: (trigger) => openAppSettingsModal(trigger) },
+        { key: 'data', label: 'データ管理・移行', open: (trigger) => openDataManagementModal(trigger) },
+      ],
+    },
+  };
+  const lastModalTab = { add: 'manual', settings: 'app' };
+
+  function openModalGroup(groupKey, trigger, tabKey = lastModalTab[groupKey]) {
+    const group = MODAL_GROUPS[groupKey];
+    const tab = group.tabs.find((t) => t.key === tabKey) || group.tabs[0];
+    if (state.activeModal && !requestCloseModal()) return;
+    tab.open(trigger);
+  }
+
+  function mountModalSwitcher(root, groupKey, activeKey) {
+    const group = MODAL_GROUPS[groupKey];
+    const header = root.querySelector('.modal-header');
+    if (!group || !header) return;
+    lastModalTab[groupKey] = activeKey;
+    const trigger = state.lastFocusElement;
+    const nav = document.createElement('div');
+    nav.className = 'modal-tabs modal-switcher';
+    nav.setAttribute('role', 'tablist');
+    nav.setAttribute('aria-label', group.label);
+    nav.innerHTML = group.tabs.map((t) => `
+      <button type="button" class="modal-tab ${t.key === activeKey ? 'is-active' : ''}" role="tab"
+        id="modal-switch-${t.key}" data-modal-switch="${t.key}" aria-selected="${t.key === activeKey}">${escapeHtml(t.label)}</button>`).join('');
+    header.after(nav);
+    nav.querySelectorAll('[data-modal-switch]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const key = btn.getAttribute('data-modal-switch');
+        if (key === activeKey) return;
+        openModalGroup(groupKey, trigger, key);
+      });
+    });
   }
 
   function requestCloseModal(force = false) {
@@ -1523,10 +1575,10 @@
   function openManualAddModal(triggerEl, earlySelection = false) {
     openModal(
       `
-      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="manual-add-title">
+      <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="manual-add-title">
         <div class="modal-header">
           <div>
-            <h2 id="manual-add-title" class="modal-title">企業を手動追加</h2>
+            <h2 id="manual-add-title" class="modal-title">企業を追加</h2>
             <p class="modal-subtitle">基本情報・職種・選考ステータス・想定年収・URL・企業概要を登録します</p>
           </div>
           <button type="button" class="btn btn-sm btn-ghost" data-modal-close aria-label="閉じる">✕ 閉じる</button>
@@ -1615,6 +1667,7 @@
       `,
       triggerEl,
       (root) => {
+        mountModalSwitcher(root, 'add', 'manual');
         const form = root.querySelector('#manual-add-form');
         const errBanner = root.querySelector('#ma-error-banner');
         const doSubmit = async () => {
@@ -2006,7 +2059,7 @@
       <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="prompt-add-title">
         <div class="modal-header">
           <div>
-            <h2 id="prompt-add-title" class="modal-title">AI / プロンプトで企業を追加</h2>
+            <h2 id="prompt-add-title" class="modal-title">企業を追加</h2>
             <p class="modal-subtitle">登録済みAPI・公式ChatGPT連携・手動貼り付けから、企業情報を検証して登録できます</p>
           </div>
           <button type="button" class="btn btn-sm btn-ghost" data-modal-close aria-label="閉じる">✕ 閉じる</button>
@@ -2063,6 +2116,7 @@
       `,
       triggerEl,
       (root) => {
+        mountModalSwitcher(root, 'add', 'prompt');
         const nameInput = root.querySelector('#pa-company-name');
         const promptBox = root.querySelector('#pa-prompt-box');
         const jsonInput = root.querySelector('#pa-json-input');
@@ -3515,8 +3569,8 @@
       <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="dm-modal-title">
         <div class="modal-header">
           <div>
-            <h2 id="dm-modal-title" class="modal-title">データ管理・バックアップ・旧版データ移行</h2>
-            <p class="modal-subtitle">すべてユーザーの明示操作と事前プレビューに基づいて安全に実行されます</p>
+            <h2 id="dm-modal-title" class="modal-title">設定</h2>
+            <p class="modal-subtitle">バックアップ・旧版データ移行・更新確認（すべて事前プレビューのうえで実行されます）</p>
           </div>
           <button type="button" class="btn btn-sm btn-ghost" data-modal-close aria-label="閉じる">✕ 閉じる</button>
         </div>
@@ -3575,6 +3629,7 @@
       `,
       triggerEl,
       (root) => {
+        mountModalSwitcher(root, 'settings', 'data');
         window.JobTrackerDrive.mountQuick(root, {
           invoke: ipcInvoke,
           escapeHtml,
@@ -3708,6 +3763,25 @@
     );
   }
 
+  function openShareModal(triggerEl) {
+    const ShareUI = window.JobTrackerShareUI;
+    if (!ShareUI || !window.JobTrackerShare) {
+      showToast('共有機能を読み込めませんでした。アプリを再起動してください。', 'error');
+      return;
+    }
+    if (state.activeModal && !requestCloseModal()) return;
+    openModal(ShareUI.buildShell(), triggerEl, (root) => {
+      ShareUI.mount(root, {
+        getCompanies: () => state.companies,
+        apiRequest,
+        copyText: copyTextToClipboard,
+        showToast,
+        escapeHtml,
+        onImported: loadAllData,
+      });
+    });
+  }
+
   function openUpdatesModal(triggerElement) {
     if (state.activeModal && !requestCloseModal()) return;
     openModal(`
@@ -3778,7 +3852,7 @@
       const capability = settings.authentication;
       openModal(`
         <div class="modal-dialog modal-lg" role="dialog" aria-modal="true" aria-labelledby="app-settings-title">
-          <div class="modal-header"><h2 id="app-settings-title" class="modal-title">アプリ設定</h2><button type="button" class="btn btn-ghost" data-modal-close aria-label="閉じる">✕</button></div>
+          <div class="modal-header"><div><h2 id="app-settings-title" class="modal-title">設定</h2><p class="modal-subtitle">表示・起動時ロック・Google Driveバックアップ</p></div><button type="button" class="btn btn-sm btn-ghost" data-modal-close aria-label="閉じる">✕ 閉じる</button></div>
           <form id="app-settings-form" class="settings-form">
             <div class="modal-body">
               <div class="form-grid">
@@ -3805,6 +3879,7 @@
             <div class="modal-footer"><button type="button" class="btn btn-outlined" data-modal-close>キャンセル</button><button type="submit" class="btn btn-primary">保存</button></div>
           </form>
         </div>`, trigger, (root) => {
+        mountModalSwitcher(root, 'settings', 'app');
         window.JobTrackerDrive.mount(root, { invoke: ipcInvoke, escapeHtml, onRestore: async () => { await loadAllData(); } });
         root.querySelector('#app-settings-form').addEventListener('submit', async (event) => {
           event.preventDefault();
@@ -3842,11 +3917,10 @@
       });
     });
 
-    document.getElementById('btn-add-manual')?.addEventListener('click', (e) => openManualAddModal(e.currentTarget));
-    document.getElementById('btn-add-prompt')?.addEventListener('click', (e) => openPromptAddModal(e.currentTarget));
+    document.getElementById('btn-add-company')?.addEventListener('click', (e) => openModalGroup('add', e.currentTarget));
     document.getElementById('btn-career-profile')?.addEventListener('click', (e) => openCareerProfileModal(e.currentTarget));
-    document.getElementById('btn-data-manage')?.addEventListener('click', (e) => openDataManagementModal(e.currentTarget));
-    document.getElementById('btn-app-settings')?.addEventListener('click', (e) => openAppSettingsModal(e.currentTarget));
+    document.getElementById('btn-share')?.addEventListener('click', (e) => openShareModal(e.currentTarget));
+    document.getElementById('btn-app-settings')?.addEventListener('click', (e) => openModalGroup('settings', e.currentTarget, 'app'));
     document.getElementById('btn-version')?.addEventListener('click', (event) => openUpdatesModal(event.currentTarget));
     document.getElementById('btn-refresh')?.addEventListener('click', (event) => openUpdatesModal(event.currentTarget));
 
@@ -3882,13 +3956,15 @@
       }).catch(() => {});
       const modalParam = params.get('modal');
       if (modalParam === 'prompt') {
-        openPromptAddModal(document.getElementById('btn-add-prompt'));
+        openPromptAddModal(document.getElementById('btn-add-company'));
       } else if (modalParam === 'manual') {
-        openManualAddModal(document.getElementById('btn-add-manual'));
+        openManualAddModal(document.getElementById('btn-add-company'));
       } else if (modalParam === 'profile') {
         openCareerProfileModal(document.getElementById('btn-career-profile'));
       } else if (modalParam === 'data') {
-        openDataManagementModal(document.getElementById('btn-data-manage'));
+        openDataManagementModal(document.getElementById('btn-app-settings'));
+      } else if (modalParam === 'share') {
+        openShareModal(document.getElementById('btn-share'));
       } else if (modalParam === 'detail' && state.companies.length > 0) {
         openCompanyDetailModal(state.companies[0].id, null, params.get('tab') || 'steps');
       }
