@@ -40,7 +40,7 @@ const { SCOPE } = require('../src/backend/google-drive.cjs');
     await evaluate("window.driveErrors=[];window.addEventListener('unhandledrejection',e=>window.driveErrors.push(String(e.reason)))");
     const closeModal = (id) => evaluate("document.querySelector('[data-modal-close]').click()").then(() => wait(`!document.getElementById(${JSON.stringify(id)})`));
     const openSettings = async () => { await click('btn-app-settings'); await wait("Boolean(document.getElementById('app-settings-form')) && Boolean(document.getElementById('drive-connect'))"); };
-    const openDataQuick = async (ready) => { await click('btn-data-manage'); await wait(`Boolean(document.getElementById('drive-quick-upload')) && document.getElementById('drive-quick-status').textContent.includes(${JSON.stringify(ready)})`); };
+    const openDataQuick = async (ready) => { await click('btn-app-settings'); await wait("Boolean(document.getElementById('modal-switch-data'))"); await click('modal-switch-data'); await wait(`Boolean(document.getElementById('drive-quick-upload')) && document.getElementById('drive-quick-status').textContent.includes(${JSON.stringify(ready)})`); };
     // Data management offers save + restore-latest only; connecting and the full list live in app settings, with no link button.
     await openDataQuick(defaultClient ? '接続していません' : '利用できません');
     assert.equal(await evaluate("Boolean(document.getElementById('btn-open-drive-settings')) || Boolean(document.getElementById('drive-connect'))"),false);
