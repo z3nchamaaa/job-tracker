@@ -21,7 +21,8 @@ test('base app excludes all npm dependencies and keeps the pinned optional manif
 test('all optional packages match the reviewed official npm lock and target CPU', () => {
   const lock = require('../package-lock.json');
   for (const [platform, arch] of [['darwin','arm64'],['darwin','x64'],['win32','x64'],['win32','arm64'],['linux','x64']]) {
-    const packages = specs(platform, arch); assert.equal(packages.length, 6);
+    const packages = specs(platform, arch);
+    assert.deepEqual(packages.map((p) => p.name), ['@github/copilot-sdk', 'koffi', 'lossless-json', 'vscode-jsonrpc', 'zod', `@github/copilot-sdk-${platform}-${arch}`, `@koromix/koffi-${platform}-${arch}`]);
     for (const p of packages) {
       const saved = lock.packages['node_modules/' + p.name];
       assert.equal(p.integrity, saved.integrity); assert.equal(p.resolved, saved.resolved); assert.equal(p.version, saved.version);

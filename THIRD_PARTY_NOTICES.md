@@ -5,11 +5,12 @@
 | 要素 | 使用・配布範囲 | 公式元・ライセンス |
 | --- | --- | --- |
 | Node.js 26.12.1 | 公式実行ファイルを対象OS・CPU別に同梱。公式アーカイブ・実行ファイル・ライセンスのSHA-256をnode-runtime-lock.jsonに固定。npmや開発用ヘッダーは非同梱 | [公式配布](https://nodejs.org/dist/v26.12.1/)、Node本体はMIT、内蔵第三者コードは各通知に従う。全文は[licenses/Node.js.txt](licenses/Node.js.txt)と配布物のruntime/LICENSE.txt |
-| @github/copilot-sdk 1.0.23 | Copilot OAuth・モデル一覧・利用枠・生成。公式npm固定版 | [公式SDK](https://github.com/github/copilot-sdk)、MIT。全文はlicenses/Copilot-SDK-MIT.txt |
-| 内包Copilot CLI 1.0.100（OS別SDK runtime 1.0.23） | 任意のCopilot追加機能として、必要時に対象OSの公式バイナリを未改変で取得 | [固定版のGitHub Copilot CLI License](https://github.com/github/copilot-cli/blob/v1.0.100/LICENSE.md)。全文はlicenses/Copilot-CLI.txt。SDKのMITとは別条件で、CLIをアプリ独自のMITで再許諾しない。CLIは再署名・entitlement変更を行わず、元の通知を保持する。内蔵推移コンポーネントの完全監査を主張しない |
-| koffi 3.2.1／@koromix/koffiの対象OS版3.2.1 | Copilot追加機能の直接依存。アプリは分離したstdio実行を選択 | MIT、同梱packageのLICENSE.txt。installスクリプトは無効にし、公式prebuilt optional packageを使用 |
-| vscode-jsonrpc 8.2.1 | SDKの通信依存 | MIT、同梱License.txt／thirdpartynotices.txt |
-| zod 4.6.6 | SDKの型検証依存 | MIT、同梱LICENSE |
+| @github/copilot-sdk 1.0.34 | Copilot OAuth・モデル一覧・利用枠・生成。公式npm固定版 | [公式SDK](https://github.com/github/copilot-sdk)、MIT。全文はlicenses/Copilot-SDK-MIT.txt |
+| 内包Copilot CLI 1.0.112（OS別SDK runtime 1.0.34） | 任意のCopilot追加機能として、必要時に対象OSの公式バイナリを未改変で取得 | [固定版のGitHub Copilot CLI License](https://github.com/github/copilot-cli/blob/v1.0.112/LICENSE.md)。全文はlicenses/Copilot-CLI.txt。SDKのMITとは別条件で、CLIをアプリ独自のMITで再許諾しない。CLIは再署名・entitlement変更を行わず、元の通知を保持する。内蔵推移コンポーネントの完全監査を主張しない |
+| koffi 3.3.6／@koromix/koffiの対象OS版3.3.6 | Copilot追加機能の直接依存。アプリは分離したstdio実行を選択 | MIT、同梱packageのLICENSE.txt。installスクリプトは無効にし、公式prebuilt optional packageを使用 |
+| lossless-json 4.3.3 | SDKのJSON解析依存（大きな数値を精度を落とさず扱う） | MIT、同梱LICENSE.md |
+| vscode-jsonrpc 10.0.0 | SDKの通信依存 | MIT、同梱License.txt／thirdpartynotices.txt |
+| zod 4.6.7 | SDKの型検証依存 | MIT、同梱LICENSE |
 | macOS AppKit/WebKit/Security/CryptoKit/LocalAuthentication | OSシステム機能、非同梱 | Apple SDK/OS利用条件 |
 | Microsoft.Web.WebView2 1.0.4258.31 | Windowsのみ、NuGet成果物を利用 | [公式NuGet](https://www.nuget.org/packages/Microsoft.Web.WebView2/1.0.4258.31)、3条項BSD型の同梱LICENSE.txtをlicenses/Microsoft.Web.WebView2.txtに保持 |
 | System.Security.Cryptography.ProtectedData 10.0.13 | Windowsのみ、DPAPI | [公式NuGet](https://www.nuget.org/packages/System.Security.Cryptography.ProtectedData/10.0.13)、MIT（.NET Runtimeの通知も確認が必要） |

@@ -48,7 +48,7 @@ function generateSbom(directory, output) {
     if (!fs.existsSync(path.join(cwd, 'licenses/Copilot-CLI.txt'))) throw new Error('Copilot CLI license notice is missing from staged application');
     component.licenses = [
       { license: { id: 'MIT' } },
-      { license: { name: 'GitHub Copilot CLI License', url: 'https://github.com/github/copilot-cli/blob/v1.0.100/LICENSE.md' } },
+      { license: { name: 'GitHub Copilot CLI License', url: 'https://github.com/github/copilot-cli/blob/v1.0.112/LICENSE.md' } },
     ];
     component.properties = [...(component.properties || []), {
       name: 'job-tracker:license-scope',

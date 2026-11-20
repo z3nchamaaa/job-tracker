@@ -1,195 +1,225 @@
 {
   "schema": 1,
-  "sdkVersion": "1.0.23",
+  "sdkVersion": "1.0.34",
   "targets": {
     "darwin-arm64": [
       {
         "name": "@github/copilot-sdk",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.23.tgz",
-        "integrity": "sha512-T//av0beD/GMMpugDvjCq9Rc9hC1wbN+O8j0fR/i+bF2v+TpeF3Ecz4phAamg8FLSeyiwfgFAxHNNsYiKJmbZQ=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.34.tgz",
+        "integrity": "sha512-dwqeNhR71lPDdzRE4QKTFXmax+dAzWfkXK4/4DKJBZp+kFrK660z+4evYdvS8Dw8yaQs1EVGAa63plrbn8MSPw=="
       },
       {
         "name": "koffi",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.2.1.tgz",
-        "integrity": "sha512-0qE3lZ8jllRqPN4Ob6Ajl7c2bJSJDhQWuKLGP5hIEpHLllJWv1ydHFMhHmHc5p/W9GticKVDbYzZd7TBoQ4CZg=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.3.6.tgz",
+        "integrity": "sha512-pPqCZg8o4laLvzxySGEju/T1Fd+eCJTVnJmcH6h1u98HFRoBQ9EokNuBSj3NxIQdzkEPRxPnHKjhBVkLeB+X0g=="
+      },
+      {
+        "name": "lossless-json",
+        "version": "4.3.3",
+        "resolved": "https://registry.npmjs.org/lossless-json/-/lossless-json-4.3.3.tgz",
+        "integrity": "sha512-FGFrGArHsv7BRiYOf37ZRieT9HlKw+Kpu9HvtpYjcoOEo8lqNkjny8A2YAfWNWWQC+9pcLIrLZ+IviKJhaHwGQ=="
       },
       {
         "name": "vscode-jsonrpc",
-        "version": "8.2.1",
-        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-8.2.1.tgz",
-        "integrity": "sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ=="
+        "version": "10.0.0",
+        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-10.0.0.tgz",
+        "integrity": "sha512-USSfxg0vDIpTQqlQBGxF3mBARyoS8cU7LHLpbYNh6dOJt32dlskxPWB0Irrh5TllTmyf7oNLAvqDqzklbwwnpA=="
       },
       {
         "name": "zod",
-        "version": "4.6.6",
-        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.6.tgz",
-        "integrity": "sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA=="
+        "version": "4.6.7",
+        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+        "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
       },
       {
         "name": "@github/copilot-sdk-darwin-arm64",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-darwin-arm64/-/copilot-sdk-darwin-arm64-1.0.23.tgz",
-        "integrity": "sha512-h0b2Izw0K82rUz7FS7Sg/SwcoRPhvApV1YCsAhz+WIdbrh2SaepWzFVCXIY4+Oy6iWuXOCklAwgtvKn6MAehDQ=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-darwin-arm64/-/copilot-sdk-darwin-arm64-1.0.34.tgz",
+        "integrity": "sha512-zJDSa0Psmtvv2Sn394wqel1AMuzaM/Bm+8rFOw9mLO/bXzPmUIKUutNcn4RkRz3FTxnbeB/914VwL7KB4IFRZQ=="
       },
       {
         "name": "@koromix/koffi-darwin-arm64",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/@koromix/koffi-darwin-arm64/-/koffi-darwin-arm64-3.2.1.tgz",
-        "integrity": "sha512-Vj4h+xcjc5+Cn0DhPHjgRX4omKAv96Kehtcd+1YgYuY2W7FvQn9vS+3SmzVwhC5Qmg9bIwUZObYQ8T/4hBqQqA=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/@koromix/koffi-darwin-arm64/-/koffi-darwin-arm64-3.3.6.tgz",
+        "integrity": "sha512-++V4qscXff/Ya5cE6vOPOomcxk3T5JQu81Uc0fvoso3VVELcoHt2/dz9E0FY0EPyQNIRcWOVg7CgvsPCKId9lg=="
       }
     ],
     "darwin-x64": [
       {
         "name": "@github/copilot-sdk",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.23.tgz",
-        "integrity": "sha512-T//av0beD/GMMpugDvjCq9Rc9hC1wbN+O8j0fR/i+bF2v+TpeF3Ecz4phAamg8FLSeyiwfgFAxHNNsYiKJmbZQ=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.34.tgz",
+        "integrity": "sha512-dwqeNhR71lPDdzRE4QKTFXmax+dAzWfkXK4/4DKJBZp+kFrK660z+4evYdvS8Dw8yaQs1EVGAa63plrbn8MSPw=="
       },
       {
         "name": "koffi",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.2.1.tgz",
-        "integrity": "sha512-0qE3lZ8jllRqPN4Ob6Ajl7c2bJSJDhQWuKLGP5hIEpHLllJWv1ydHFMhHmHc5p/W9GticKVDbYzZd7TBoQ4CZg=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.3.6.tgz",
+        "integrity": "sha512-pPqCZg8o4laLvzxySGEju/T1Fd+eCJTVnJmcH6h1u98HFRoBQ9EokNuBSj3NxIQdzkEPRxPnHKjhBVkLeB+X0g=="
+      },
+      {
+        "name": "lossless-json",
+        "version": "4.3.3",
+        "resolved": "https://registry.npmjs.org/lossless-json/-/lossless-json-4.3.3.tgz",
+        "integrity": "sha512-FGFrGArHsv7BRiYOf37ZRieT9HlKw+Kpu9HvtpYjcoOEo8lqNkjny8A2YAfWNWWQC+9pcLIrLZ+IviKJhaHwGQ=="
       },
       {
         "name": "vscode-jsonrpc",
-        "version": "8.2.1",
-        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-8.2.1.tgz",
-        "integrity": "sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ=="
+        "version": "10.0.0",
+        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-10.0.0.tgz",
+        "integrity": "sha512-USSfxg0vDIpTQqlQBGxF3mBARyoS8cU7LHLpbYNh6dOJt32dlskxPWB0Irrh5TllTmyf7oNLAvqDqzklbwwnpA=="
       },
       {
         "name": "zod",
-        "version": "4.6.6",
-        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.6.tgz",
-        "integrity": "sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA=="
+        "version": "4.6.7",
+        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+        "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
       },
       {
         "name": "@github/copilot-sdk-darwin-x64",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-darwin-x64/-/copilot-sdk-darwin-x64-1.0.23.tgz",
-        "integrity": "sha512-V2SYhXIxEJAgyKHvPXd1Y8fD2NCRjBauzoJgA5GIyIi6A8Kq8x+1qz16vTik1IH8ExczwcuG+4+frwtODSNFRw=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-darwin-x64/-/copilot-sdk-darwin-x64-1.0.34.tgz",
+        "integrity": "sha512-bRnCZBbSnkLpKfHEO3harCa1UXwUIDG/tCuwCLhAIUrC9A6vK4Dr7uMPGqPXN+47A3Zpzk/5JmadczY1S0UQdQ=="
       },
       {
         "name": "@koromix/koffi-darwin-x64",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/@koromix/koffi-darwin-x64/-/koffi-darwin-x64-3.2.1.tgz",
-        "integrity": "sha512-gFCWxNBTZIvxo1p+PURWfsy2Ctj5FGnVVs1f03lTLhBvmxEto70pdIiFztdFLDFkAJ1pmtQmruRKapeK+E8YPA=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/@koromix/koffi-darwin-x64/-/koffi-darwin-x64-3.3.6.tgz",
+        "integrity": "sha512-eOyit0eyfkmdXCNlOkG8cNtpQUx+dikr1QsozJdwm7/zH1u7KP5dRtmsaGUMLSUY7cVYSRTUStkwHBrHjBtuzw=="
       }
     ],
     "win32-x64": [
       {
         "name": "@github/copilot-sdk",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.23.tgz",
-        "integrity": "sha512-T//av0beD/GMMpugDvjCq9Rc9hC1wbN+O8j0fR/i+bF2v+TpeF3Ecz4phAamg8FLSeyiwfgFAxHNNsYiKJmbZQ=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.34.tgz",
+        "integrity": "sha512-dwqeNhR71lPDdzRE4QKTFXmax+dAzWfkXK4/4DKJBZp+kFrK660z+4evYdvS8Dw8yaQs1EVGAa63plrbn8MSPw=="
       },
       {
         "name": "koffi",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.2.1.tgz",
-        "integrity": "sha512-0qE3lZ8jllRqPN4Ob6Ajl7c2bJSJDhQWuKLGP5hIEpHLllJWv1ydHFMhHmHc5p/W9GticKVDbYzZd7TBoQ4CZg=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.3.6.tgz",
+        "integrity": "sha512-pPqCZg8o4laLvzxySGEju/T1Fd+eCJTVnJmcH6h1u98HFRoBQ9EokNuBSj3NxIQdzkEPRxPnHKjhBVkLeB+X0g=="
+      },
+      {
+        "name": "lossless-json",
+        "version": "4.3.3",
+        "resolved": "https://registry.npmjs.org/lossless-json/-/lossless-json-4.3.3.tgz",
+        "integrity": "sha512-FGFrGArHsv7BRiYOf37ZRieT9HlKw+Kpu9HvtpYjcoOEo8lqNkjny8A2YAfWNWWQC+9pcLIrLZ+IviKJhaHwGQ=="
       },
       {
         "name": "vscode-jsonrpc",
-        "version": "8.2.1",
-        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-8.2.1.tgz",
-        "integrity": "sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ=="
+        "version": "10.0.0",
+        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-10.0.0.tgz",
+        "integrity": "sha512-USSfxg0vDIpTQqlQBGxF3mBARyoS8cU7LHLpbYNh6dOJt32dlskxPWB0Irrh5TllTmyf7oNLAvqDqzklbwwnpA=="
       },
       {
         "name": "zod",
-        "version": "4.6.6",
-        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.6.tgz",
-        "integrity": "sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA=="
+        "version": "4.6.7",
+        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+        "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
       },
       {
         "name": "@github/copilot-sdk-win32-x64",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-win32-x64/-/copilot-sdk-win32-x64-1.0.23.tgz",
-        "integrity": "sha512-pvzfLmvf5GmH4bXinUaLUWixIsGxjRDqEBYORsai4MrYUPGhF0KQ2z4jXYTDifIcVkQ2f5nPvn6SFCugZlvEsQ=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-win32-x64/-/copilot-sdk-win32-x64-1.0.34.tgz",
+        "integrity": "sha512-d8H8C/UBgx06JILbn+AaxpjNlygi2M48T4rHBufiDYHZIeqdGkNk4Idh9dDAYM/Vze1QXS75I7kgzoBa+p49qw=="
       },
       {
         "name": "@koromix/koffi-win32-x64",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/@koromix/koffi-win32-x64/-/koffi-win32-x64-3.2.1.tgz",
-        "integrity": "sha512-ZmZNiBO6bkOSh3QNzgfvb1cMY0yMobn6ZQrSMqbAce21qyYL8niIbyipz9N/PIRDciGhsV0wUxnZsxIO+yWsHQ=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/@koromix/koffi-win32-x64/-/koffi-win32-x64-3.3.6.tgz",
+        "integrity": "sha512-g9KC6VKQLe88Tjgeubk3yhu0CjtqSeRq4XjWFWxUq4rsP0/wfLUBoeISvG60HoPmhYQp+U7hVd8Ms+amOMHDvA=="
       }
     ],
     "win32-arm64": [
       {
         "name": "@github/copilot-sdk",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.23.tgz",
-        "integrity": "sha512-T//av0beD/GMMpugDvjCq9Rc9hC1wbN+O8j0fR/i+bF2v+TpeF3Ecz4phAamg8FLSeyiwfgFAxHNNsYiKJmbZQ=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.34.tgz",
+        "integrity": "sha512-dwqeNhR71lPDdzRE4QKTFXmax+dAzWfkXK4/4DKJBZp+kFrK660z+4evYdvS8Dw8yaQs1EVGAa63plrbn8MSPw=="
       },
       {
         "name": "koffi",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.2.1.tgz",
-        "integrity": "sha512-0qE3lZ8jllRqPN4Ob6Ajl7c2bJSJDhQWuKLGP5hIEpHLllJWv1ydHFMhHmHc5p/W9GticKVDbYzZd7TBoQ4CZg=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.3.6.tgz",
+        "integrity": "sha512-pPqCZg8o4laLvzxySGEju/T1Fd+eCJTVnJmcH6h1u98HFRoBQ9EokNuBSj3NxIQdzkEPRxPnHKjhBVkLeB+X0g=="
+      },
+      {
+        "name": "lossless-json",
+        "version": "4.3.3",
+        "resolved": "https://registry.npmjs.org/lossless-json/-/lossless-json-4.3.3.tgz",
+        "integrity": "sha512-FGFrGArHsv7BRiYOf37ZRieT9HlKw+Kpu9HvtpYjcoOEo8lqNkjny8A2YAfWNWWQC+9pcLIrLZ+IviKJhaHwGQ=="
       },
       {
         "name": "vscode-jsonrpc",
-        "version": "8.2.1",
-        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-8.2.1.tgz",
-        "integrity": "sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ=="
+        "version": "10.0.0",
+        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-10.0.0.tgz",
+        "integrity": "sha512-USSfxg0vDIpTQqlQBGxF3mBARyoS8cU7LHLpbYNh6dOJt32dlskxPWB0Irrh5TllTmyf7oNLAvqDqzklbwwnpA=="
       },
       {
         "name": "zod",
-        "version": "4.6.6",
-        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.6.tgz",
-        "integrity": "sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA=="
+        "version": "4.6.7",
+        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+        "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
       },
       {
         "name": "@github/copilot-sdk-win32-arm64",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-win32-arm64/-/copilot-sdk-win32-arm64-1.0.23.tgz",
-        "integrity": "sha512-95LqiyE/SW9PQmxV0bGoYnEqMkIM8sfJeG3TtgJtcOZN2N+KKuc5AeJUknokjl/IWJD/b5ATqvOiSAsJrxbgmA=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-win32-arm64/-/copilot-sdk-win32-arm64-1.0.34.tgz",
+        "integrity": "sha512-UEpFWlJyaBhTr12JOrFKF6Pp2ydQoLzWSs+t26OJhNDKOcoJ0O/85iIFHJx+/PN/b6FsF/gcsTPdhVeM5aq6Fg=="
       },
       {
         "name": "@koromix/koffi-win32-arm64",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/@koromix/koffi-win32-arm64/-/koffi-win32-arm64-3.2.1.tgz",
-        "integrity": "sha512-cTWBJGK//pDMeKQJE/79Aq9MiOAF4H8QyLZHSQ9IWm8czOfwjG4J1AhsQ9DjI9KFOykH77hhnpmQTGVMIubGig=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/@koromix/koffi-win32-arm64/-/koffi-win32-arm64-3.3.6.tgz",
+        "integrity": "sha512-WDVsrvWAaHbA7xiCMXX3PBmfDf4+VnfY67ryRAW86QNW8109W9WPS3YVGGD2YoPswDmSZsMBVzzZCEFUrLdJuA=="
       }
     ],
     "linux-x64": [
       {
         "name": "@github/copilot-sdk",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.23.tgz",
-        "integrity": "sha512-T//av0beD/GMMpugDvjCq9Rc9hC1wbN+O8j0fR/i+bF2v+TpeF3Ecz4phAamg8FLSeyiwfgFAxHNNsYiKJmbZQ=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk/-/copilot-sdk-1.0.34.tgz",
+        "integrity": "sha512-dwqeNhR71lPDdzRE4QKTFXmax+dAzWfkXK4/4DKJBZp+kFrK660z+4evYdvS8Dw8yaQs1EVGAa63plrbn8MSPw=="
       },
       {
         "name": "koffi",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.2.1.tgz",
-        "integrity": "sha512-0qE3lZ8jllRqPN4Ob6Ajl7c2bJSJDhQWuKLGP5hIEpHLllJWv1ydHFMhHmHc5p/W9GticKVDbYzZd7TBoQ4CZg=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/koffi/-/koffi-3.3.6.tgz",
+        "integrity": "sha512-pPqCZg8o4laLvzxySGEju/T1Fd+eCJTVnJmcH6h1u98HFRoBQ9EokNuBSj3NxIQdzkEPRxPnHKjhBVkLeB+X0g=="
+      },
+      {
+        "name": "lossless-json",
+        "version": "4.3.3",
+        "resolved": "https://registry.npmjs.org/lossless-json/-/lossless-json-4.3.3.tgz",
+        "integrity": "sha512-FGFrGArHsv7BRiYOf37ZRieT9HlKw+Kpu9HvtpYjcoOEo8lqNkjny8A2YAfWNWWQC+9pcLIrLZ+IviKJhaHwGQ=="
       },
       {
         "name": "vscode-jsonrpc",
-        "version": "8.2.1",
-        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-8.2.1.tgz",
-        "integrity": "sha512-kdjOSJ2lLIn7r1rtrMbbNCHjyMPfRnowdKjBQ+mGq6NAW5QY2bEZC/khaC5OR8svbbjvLEaIXkOq45e2X9BIbQ=="
+        "version": "10.0.0",
+        "resolved": "https://registry.npmjs.org/vscode-jsonrpc/-/vscode-jsonrpc-10.0.0.tgz",
+        "integrity": "sha512-USSfxg0vDIpTQqlQBGxF3mBARyoS8cU7LHLpbYNh6dOJt32dlskxPWB0Irrh5TllTmyf7oNLAvqDqzklbwwnpA=="
       },
       {
         "name": "zod",
-        "version": "4.6.6",
-        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.6.tgz",
-        "integrity": "sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA=="
+        "version": "4.6.7",
+        "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
+        "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="
       },
       {
         "name": "@github/copilot-sdk-linux-x64",
-        "version": "1.0.23",
-        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-linux-x64/-/copilot-sdk-linux-x64-1.0.23.tgz",
-        "integrity": "sha512-hGcasO3J1loFgCSXgtepVUsnRNmw3KdD7jbmPC4s+1RsidWJnWbYTg/pVHiKksCFL6+lhP5qP2AY1nLpGgPI3A=="
+        "version": "1.0.34",
+        "resolved": "https://registry.npmjs.org/@github/copilot-sdk-linux-x64/-/copilot-sdk-linux-x64-1.0.34.tgz",
+        "integrity": "sha512-/3BS48gnx1mEfXXkCO/reFZudVdEb3+BOG+h7SdC/zg25wHg5FvDR0zesNYFfv47W9zOGo6SInVnKf9O1MhJ7g=="
       },
       {
         "name": "@koromix/koffi-linux-x64",
-        "version": "3.2.1",
-        "resolved": "https://registry.npmjs.org/@koromix/koffi-linux-x64/-/koffi-linux-x64-3.2.1.tgz",
-        "integrity": "sha512-c7hw7Qs/r5gnFRTQLcbifBwRU7wiocj+2pVuDQ5Ahb3r36SZmupmgYbTWcLvTW+hul1jd7SKRV0d14ZJq/tvSw=="
+        "version": "3.3.6",
+        "resolved": "https://registry.npmjs.org/@koromix/koffi-linux-x64/-/koffi-linux-x64-3.3.6.tgz",
+        "integrity": "sha512-RTRbVTZ1rf1GFowSsbuU2acYoRq66ZwJGh+rTgau1Cat3muv2884p0FRH6UKfwlgWkpjIHJ7N8N0liM7Oe2eAQ=="
       }
     ]
   }

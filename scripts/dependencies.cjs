@@ -2,14 +2,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-const VERSIONS = Object.freeze({ '@github/copilot-sdk': '1.0.23', koffi: '3.2.1', 'vscode-jsonrpc': '8.2.1', zod: '4.6.6' });
+const VERSIONS = Object.freeze({ '@github/copilot-sdk': '1.0.34', koffi: '3.3.6', 'lossless-json': '4.3.3', 'vscode-jsonrpc': '10.0.0', zod: '4.6.7' });
 
 function verifyDependencyPolicy(directory = root) {
   const pkg = JSON.parse(fs.readFileSync(path.join(directory, 'package.json')));
   const lock = JSON.parse(fs.readFileSync(path.join(directory, 'package-lock.json')));
   if (JSON.stringify(pkg.dependencies) !== JSON.stringify({ '@github/copilot-sdk': VERSIONS['@github/copilot-sdk'] }) || Object.keys(pkg.devDependencies || {}).length) throw new Error('Only the pinned official Copilot SDK is an approved direct dependency');
   if (JSON.stringify(pkg.overrides) !== JSON.stringify({ '@github/copilot-sdk': { zod: VERSIONS.zod } })) throw new Error('The reviewed Zod security override must remain pinned');
-  const approved = (name) => VERSIONS[name] || (/^@github\/copilot-sdk-(darwin|linux|linuxmusl|win32)-(arm64|x64)$/.test(name) ? '1.0.23' : /^@koromix\/koffi-(android|darwin|freebsd|linux|openbsd|win32)-(arm|arm64|ia32|loong64|riscv64|x64)$/.test(name) ? '3.2.1' : null);
+  const approved = (name) => VERSIONS[name] || (/^@github\/copilot-sdk-(darwin|linux|linuxmusl|win32)-(arm64|x64)$/.test(name) ? '1.0.34' : /^@koromix\/koffi-(android|darwin|freebsd|linux|openbsd|win32)-(arm|arm64|ia32|loong64|ppc64|riscv64|x64)$/.test(name) ? '3.3.6' : null);
   for (const [key, entry] of Object.entries(lock.packages || {})) {
     if (!key) continue;
     const name = key.replace(/^node_modules\//, '');
