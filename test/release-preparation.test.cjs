@@ -46,7 +46,7 @@ test('manifest rejects duplicate and traversing paths', (t) => {
 });
 test('bundled Copilot dependency or stale SBOM prevents release readiness', (t) => {
   const {dir,sbom,save}=fixture(t);
-  sbom.components.push({name:'@github/copilot-sdk-win32-x64',version:'1.0.23'}); save();
+  sbom.components.push({name:'@github/copilot-sdk-win32-x64',version:'1.0.34'}); save();
   assert.equal(checkCandidate(dir,{version:'2.0.0'}).find(c=>c.name==='optional Copilot pack').passed,false);
   sbom.metadata.component.version='1.0.0'; save();
   assert.equal(checkCandidate(dir,{version:'2.0.0'}).find(c=>c.name==='platform SBOM').passed,false);

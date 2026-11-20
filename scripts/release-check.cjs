@@ -39,7 +39,7 @@ function checkCandidate(directory, { version, platform = 'darwin', arch = 'arm64
   });
   check('optional Copilot pack', () => {
     if (!bom?.metadata?.properties?.some((p) => p.name === 'job-tracker:copilot-mode' && p.value === 'optional')) throw new Error('Copilot optional-pack policy is missing');
-    if (bom.components.some((c) => c.name.startsWith('@github/copilot-sdk') || ['koffi', 'zod', 'vscode-jsonrpc'].includes(c.name))) throw new Error('Copilot dependencies must not be in the base application');
+    if (bom.components.some((c) => c.name.startsWith('@github/copilot-sdk') || ['koffi', 'zod', 'vscode-jsonrpc', 'lossless-json'].includes(c.name))) throw new Error('Copilot dependencies must not be in the base application');
     return 'Copilot is an explicit optional download; Node remains bundled';
   });
   check('bundled Node runtime', () => {

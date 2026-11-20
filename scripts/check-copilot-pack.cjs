@@ -25,7 +25,7 @@ if (!process.argv.includes('--download')) throw new Error('Use --download to exp
     fs.appendFileSync(path.join(root, 'node_modules/@github/copilot-sdk/package.json'), '\n');
     assert.throws(() => new CopilotPack({ directory: pack.directory }).load(), /破損/);
     const removed = pack.remove(); assert.equal(removed.installed, false);
-    const report = { platform: process.platform, arch: process.arch, bytes, officialPackages: 6, zodVersion, integrity: 'SHA-512 before extraction and per-file SHA-256 before loading', sdkExportsLoaded: true, tamperingRejected: true, removed: true, pendingRestart: removed.pendingRestart, realLoginOrGeneration: false };
+    const report = { platform: process.platform, arch: process.arch, bytes, officialPackages: require('../src/backend/copilot-pack.cjs').specs(process.platform, process.arch).length, zodVersion, integrity: 'SHA-512 before extraction and per-file SHA-256 before loading', sdkExportsLoaded: true, tamperingRejected: true, removed: true, pendingRestart: removed.pendingRestart, realLoginOrGeneration: false };
     const output = path.resolve(__dirname, '../dist/verification/copilot-pack-' + process.platform + '-' + process.arch + '.json');
     fs.mkdirSync(path.dirname(output), { recursive: true }); fs.writeFileSync(output, JSON.stringify(report, null, 2) + '\n');
     console.log(JSON.stringify(report));

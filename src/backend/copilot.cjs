@@ -221,6 +221,8 @@ class CopilotService {
         tools: [], mcpServers: {}, customAgents: [], enableConfigDiscovery: false, enableSkills: false, enableFileHooks: false,
         enableHostGitOperations: false, enableOnDemandInstructionDiscovery: false, enableSessionStore: false,
         enableSessionTelemetry: false, interactiveUser: false, remoteSession: 'off', infiniteSessions: { enabled: false },
+        // SDK 1.0.34以降: 組み込みサブエージェントと自動継続（追加リクエスト）を使わない
+        includedBuiltinAgents: [], autopilot: { continuationEnabled: false, maxContinues: 0 },
         onPermissionRequest: () => ({ kind: 'denied-no-approval-rule-and-could-not-request-from-user' }),
       });
       const response = await session.sendAndWait({ prompt: value.input + '\nこの接続ではWeb検索やローカルファイル参照を使えません。最新の日程・待遇・確認日を確認済みと偽らず、不明項目はnullか空欄にし、要求された企業JSONだけを返してください。' }, 150000);

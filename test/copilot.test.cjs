@@ -96,6 +96,8 @@ test('SDK requests run in an empty isolated workspace, deny every tool, remove t
   assert(config.onPermissionRequest({ kind: 'shell' }).kind.startsWith('denied-'));
   for (const key of ['enableConfigDiscovery','enableSkills','enableFileHooks','enableHostGitOperations','enableSessionStore','enableSessionTelemetry']) assert.equal(config[key], false);
   assert.equal(config.remoteSession, 'off'); assert.equal(config.infiniteSessions.enabled, false);
+  assert.deepEqual(config.includedBuiltinAgents, []);
+  assert.deepEqual(config.autopilot, { continuationEnabled: false, maxContinues: 0 });
   assert(prompt.includes('Web検索やローカルファイル参照を使えません'));
   assert.equal(fs.existsSync(options.env.HOME), false); assert.equal(stopped, 1);
   const env = isolatedEnvironment('/synthetic'); assert.equal(env.COPILOT_GITHUB_TELEMETRY_DISABLED, 'true');
